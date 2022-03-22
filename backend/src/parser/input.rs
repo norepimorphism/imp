@@ -1,6 +1,6 @@
+use super::Error;
 use crate::lexer::Token;
 use std::iter::Peekable;
-use super::Error;
 
 pub struct Stream<I: Iterator<Item = Token>>(Peekable<I>);
 
@@ -11,6 +11,10 @@ impl<I: Iterator<Item = Token>> Stream<I> {
 
     pub fn is_empty(&mut self) -> bool {
         self.peek().is_none()
+    }
+
+    pub fn advance(&mut self) {
+        let _ = self.next();
     }
 
     pub fn next(&mut self) -> Option<Token> {

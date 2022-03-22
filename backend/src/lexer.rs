@@ -2,28 +2,31 @@ use std::fmt;
 
 /// Translates a raw string into lexical tokens.
 pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
-    let mut input = input.chars().peekable();
     let mut tokens = Vec::new();
+    let mut input = input.chars().peekable();
 
     // Process the entire string, one character at a time.
     while let Some(next) = input.next() {
         let maybe_token = match next {
+            // Single-character tokens.
             '(' => Ok(Some(Token::LParen)),
             ')' => Ok(Some(Token::RParen)),
             '+' => Ok(Some(Token::Plus)),
             '-' => Ok(Some(Token::Minus)),
             '*' => Ok(Some(Token::Star)),
             '/' => Ok(Some(Token::Slash)),
+            // Multi-character tokens.
             _ => {
+                // Try each tokenizer, in this order.
                 [
                     NUMBER_TOKENIZER,
-                    WORD_TOKENIZER,
+                    SYMBOL_TOKENIZER,
                     WHITESPACE_TOKENIZER,
                     COMMENT_TOKENIZER,
                 ]
                 .into_iter()
-                // The first tokenizer to accept the given character is selected.
-                .find(|tokenizer| (tokenizer.accepts)("", next))
+                // Select the first tokenizer to accept the given character.
+                .find(|tokenizer| (tokenizer.accepts)(None, next))
                 .map_or_else(
                     || Err(Error::InvalidInput(next)),
                     |tokenizer| {
@@ -31,7 +34,7 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
 
                         // Continue processing characters with the selected tokenizer.
                         while let Some(next) = input.peek().copied() {
-                            if (tokenizer.accepts)(raw_token.as_str(), next) {
+                            if (tokenizer.accepts)(Some(raw_token.as_str()), next) {
                                 raw_token.push(next);
                                 // Manually advance the iterator because [`Iterator::peek`] does
                                 // not.
@@ -45,7 +48,7 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
 
                         // Translate `raw_token` into a [`Token`].
                         Ok((tokenizer.tokenize)(raw_token))
-                    }
+                    },
                 )
             }
         }?;
@@ -60,14 +63,25 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
 
 const NUMBER_TOKENIZER: Tokenizer = Tokenizer {
     accepts: |prev, next| {
-        (prev.is_empty() && (next == '-')) || next.is_ascii_digit()
+        // A number may be prefixed by its sign.
+        (prev.is_none() && ((next == '-') || (next == '+')))
+        // A number may also include a decimal point in any location, including the first and last.
+        || (next == '.')
+        || next.is_ascii_digit()
     },
     tokenize: |raw| Some(Token::Number(raw)),
 };
 
-const WORD_TOKENIZER: Tokenizer = Tokenizer {
-    accepts: |_, next| next.is_ascii_alphabetic(),
-    tokenize: |raw| Some(Token::Word(raw)),
+const SYMBOL_TOKENIZER: Tokenizer = Tokenizer {
+    accepts: |prev, next| {
+        // A symbol may always include alphabetic characters at any position.
+        next.is_alphabetic()
+        // A symbol may also include numeric characters as well as `-`, but neither can be the first
+        // character.
+        || (prev.is_some() && (next.is_ascii_digit() || (next == '-')))
+
+    },
+    tokenize: |raw| Some(Token::Symbol(raw)),
 };
 
 const WHITESPACE_TOKENIZER: Tokenizer = Tokenizer {
@@ -77,7 +91,7 @@ const WHITESPACE_TOKENIZER: Tokenizer = Tokenizer {
 
 const COMMENT_TOKENIZER: Tokenizer = Tokenizer {
     accepts: |prev, next| {
-        if prev.is_empty() {
+        if prev.is_none() {
             next == ';'
         } else {
             next != '\n'
@@ -87,7 +101,7 @@ const COMMENT_TOKENIZER: Tokenizer = Tokenizer {
 };
 
 struct Tokenizer {
-    accepts: fn(prev: &str, next: char) -> bool,
+    accepts: fn(prev: Option<&str>, next: char) -> bool,
     tokenize: fn(raw: String) -> Option<Token>,
 }
 
@@ -100,8 +114,9 @@ pub enum Token {
     Minus,
     Star,
     Slash,
+    /// A rational number.
     Number(String),
-    Word(String),
+    Symbol(String),
 }
 
 #[derive(Debug)]

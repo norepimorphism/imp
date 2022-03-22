@@ -10,10 +10,11 @@ fn main() {
         let mut input = String::new();
         let _ = io::stdin().read_line(&mut input);
 
-        let lexed = oracle_backend::lexer::lex(input.as_str()).unwrap();
-        println!("{:?}", lexed);
-        let parsed = oracle_backend::parser::parse(lexed.into_iter()).unwrap();
-        println!("{:#?}", parsed);
-        println!("{}", parsed);
+        let tokens = oracle_backend::lexer::lex(input.as_str()).unwrap();
+        println!("{:?}", tokens);
+        let ast = oracle_backend::parser::parse(tokens.into_iter()).unwrap();
+        println!("{:#?}", ast);
+        println!("{}", ast);
+        oracle_backend::interp::interpret_ast(ast);
     }
 }
