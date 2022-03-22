@@ -15,6 +15,6 @@ fn main() {
         let ast = oracle_backend::parser::parse(tokens.into_iter()).unwrap();
         println!("{:#?}", ast);
         println!("{}", ast);
-        oracle_backend::interp::interpret_ast(ast);
+        oracle_backend::interp::eval_ast(ast);
     }
 }

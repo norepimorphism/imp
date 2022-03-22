@@ -30,6 +30,7 @@ impl fmt::Display for Ast {
                             let Number::Int(it) = it;
                             Tree::new(it.to_string(), Vec::new())
                         }
+                        Operand::StrLit(it) => Tree::new(it.content.clone(), Vec::new()),
                         Operand::Symbol(it) => Tree::new(it.name.clone(), Vec::new()),
                     })
                     .collect(),
@@ -150,6 +151,7 @@ impl Operation {
             Token::Minus => Ok("sub".to_string()),
             Token::Star => Ok("mul".to_string()),
             Token::Slash => Ok("div".to_string()),
+            Token::Dollar => Ok("eval".to_string()),
             Token::Symbol(name) => Ok(name.clone()),
             _ => Err(Error::InvalidOperation),
         }?;
@@ -162,6 +164,7 @@ impl Operation {
 pub enum Operand {
     Expr(Expr),
     Number(Number),
+    StrLit(StrLit),
     Symbol(Symbol),
 }
 
@@ -174,6 +177,7 @@ impl Operand {
         match determinant {
             Token::LParen => Expr::parse(input, false).map(Operand::Expr),
             Token::Number(_) => Number::parse(input).map(Operand::Number),
+            Token::StrLit(_) => StrLit::parse(input).map(Operand::StrLit),
             Token::Symbol(_) => Symbol::parse(input).map(Operand::Symbol),
             _ => Err(Error::InvalidOperand),
         }
@@ -203,6 +207,25 @@ impl Number {
 }
 
 #[derive(Debug)]
+pub struct StrLit {
+    pub content: String,
+}
+
+impl StrLit {
+    fn parse<I: Iterator<Item = Token>>(input: &mut input::Stream<I>) -> Result<Self, Error> {
+        let lit = input
+            .next()
+            .ok_or_else(|| Error::ExpectedStrLit)?;
+
+        if let Token::StrLit(content) = lit {
+            Ok(Self { content })
+        } else {
+            Err(Error::InvalidStrLit)
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Symbol {
     pub name: String,
 }
@@ -227,11 +250,13 @@ pub enum Error {
     ExpectedNumber,
     ExpectedOperand,
     ExpectedOperation,
+    ExpectedStrLit,
     ExpectedSymbol,
     ExpectedToken(Token),
     InvalidNumber,
     InvalidOperand,
     InvalidOperation,
+    InvalidStrLit,
     InvalidSymbol,
 }
 
