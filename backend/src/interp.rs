@@ -1,5 +1,6 @@
 use crate::parser::{Ast, Expr};
 
+#[derive(Default)]
 pub struct Interp {
 
 }

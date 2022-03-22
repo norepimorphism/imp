@@ -5,9 +5,9 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
     let mut tokens = Vec::new();
     let mut input = input.chars().peekable();
 
-    // Process the entire string, one character at a time.
-    while let Some(next) = input.next() {
-        let maybe_token = match next {
+    // Process the entire `input` string, one character at a time.
+    while let Some(new) = input.next() {
+        let maybe_token = match new {
             // Single-character tokens.
             '(' => Ok(Some(Token::LParen)),
             ')' => Ok(Some(Token::RParen)),
@@ -20,7 +20,7 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
             _ => {
                 // Try each tokenizer in this order.
                 [
-                    NUMBER_TOKENIZER,
+                    RATIO_TOKENIZER,
                     STR_LIT_TOKENIZER,
                     SYMBOL_TOKENIZER,
                     WHITESPACE_TOKENIZER,
@@ -28,30 +28,32 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
                 ]
                 .into_iter()
                 // Select the first tokenizer to accept the given character.
-                .find(|tokenizer| (tokenizer.accepts)("", next))
+                .find(|tokenizer| (tokenizer.accepts)("", new))
                 .map_or_else(
                     // The character was not accepted by any tokenizers, so it is considered
                     // invalid.
-                    || Err(Error::InvalidInput(next)),
+                    || Err(Error::InvalidInput(new)),
+                    // A compatible tokenizer was found.
                     |tokenizer| {
-                        let mut raw_token = next.to_string();
+                        let mut current_token = new.to_string();
 
-                        // Continue processing characters with the selected tokenizer.
+                        // Continue processing characters with the selected tokenizer. Use
+                        // [`Peekable::peek`] so that rejected characters may be processed again.
                         while let Some(new) = input.peek().copied() {
-                            if (tokenizer.accepts)(raw_token.as_str(), new) {
-                                raw_token.push(next);
-                                // Manually advance the iterator because [`Iterator::peek`] does
+                            if (tokenizer.accepts)(current_token.as_str(), new) {
+                                current_token.push(new);
+                                // Manually advance the iterator because [`Peekable::peek`] does
                                 // not.
                                 let _ = input.next();
                             } else {
-                                // The tokenizer rejected the new character. `raw_token` is now
+                                // The tokenizer rejected the new character. `current_token` is now
                                 // complete.
                                 break;
                             }
                         }
 
-                        // Translate `raw_token` into a [`Token`].
-                        Ok((tokenizer.tokenize)(raw_token))
+                        // Translate `current_token` into a [`Token`].
+                        Ok((tokenizer.tokenize)(current_token))
                     },
                 )
             }
@@ -65,7 +67,8 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
     Ok(tokens)
 }
 
-const NUMBER_TOKENIZER: Tokenizer = Tokenizer {
+/// A tokenizer that accepts rational numbers.
+const RATIO_TOKENIZER: Tokenizer = Tokenizer {
     accepts: |current, new| {
         if new.is_ascii_digit() {
             return true;
@@ -77,13 +80,14 @@ const NUMBER_TOKENIZER: Tokenizer = Tokenizer {
         } else {
             // A number may also include a decimal point in any location, including the first and
             // last character.
-            // TODO: Satisfy europeans
+            // TODO: Make this configurable to a comma.
             new == '.'
         }
     },
     tokenize: |raw| Some(Token::Number(raw)),
 };
 
+/// A tokenizer that accepts string literals.
 const STR_LIT_TOKENIZER: Tokenizer = Tokenizer {
     accepts: |current, new| {
         if current.is_empty() {
@@ -108,6 +112,7 @@ const STR_LIT_TOKENIZER: Tokenizer = Tokenizer {
     }
 };
 
+/// A tokenizer that accepts symbols.
 const SYMBOL_TOKENIZER: Tokenizer = Tokenizer {
     accepts: |current, new| {
         if new.is_alphabetic() {
@@ -126,11 +131,13 @@ const SYMBOL_TOKENIZER: Tokenizer = Tokenizer {
     tokenize: |raw| Some(Token::Symbol(raw)),
 };
 
+/// A tokenizer that consumes whitespace.
 const WHITESPACE_TOKENIZER: Tokenizer = Tokenizer {
     accepts: |_, new| new.is_ascii_whitespace(),
     tokenize: |_| None,
 };
 
+/// A tokenizer that consumes comments.
 const COMMENT_TOKENIZER: Tokenizer = Tokenizer {
     accepts: |current, new| {
         if current.is_empty() {
@@ -150,17 +157,25 @@ struct Tokenizer {
 /// A lexical token.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Token {
+    /// A left, or opening, parenthesis.
     LParen,
+    /// A right, or closing, parenthesis.
     RParen,
+    /// A plus sign (+).
     Plus,
+    /// A minus sign (-).
     Minus,
+    /// An asterisk (*).
     Star,
+    /// A forward slash (/).
     Slash,
+    /// A dollar sign ($).
     Dollar,
     /// A rational number.
     Number(String),
     /// A string literal.
     StrLit(String),
+    /// A symbol.
     Symbol(String),
 }
 
