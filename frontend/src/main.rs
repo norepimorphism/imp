@@ -14,5 +14,6 @@ fn main() {
         println!("{:?}", lexed);
         let parsed = oracle_backend::parser::parse(lexed.into_iter()).unwrap();
         println!("{:#?}", parsed);
+        println!("{}", parsed);
     }
 }

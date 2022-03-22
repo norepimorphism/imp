@@ -5,14 +5,15 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
     let mut input = input.chars().peekable();
     let mut tokens = Vec::new();
 
+    // Process the entire string, one character at a time.
     while let Some(next) = input.next() {
         let maybe_token = match next {
-            '(' => Ok(Some(Token::LeftParen)),
-            ')' => Ok(Some(Token::RightParen)),
+            '(' => Ok(Some(Token::LParen)),
+            ')' => Ok(Some(Token::RParen)),
             '+' => Ok(Some(Token::Plus)),
             '-' => Ok(Some(Token::Minus)),
-            '/' => Ok(Some(Token::Slash)),
             '*' => Ok(Some(Token::Star)),
+            '/' => Ok(Some(Token::Slash)),
             _ => {
                 [
                     NUMBER_TOKENIZER,
@@ -21,21 +22,28 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
                     COMMENT_TOKENIZER,
                 ]
                 .into_iter()
+                // The first tokenizer to accept the given character is selected.
                 .find(|tokenizer| (tokenizer.accepts)("", next))
                 .map_or_else(
                     || Err(Error::InvalidInput(next)),
                     |tokenizer| {
                         let mut raw_token = next.to_string();
 
+                        // Continue processing characters with the selected tokenizer.
                         while let Some(next) = input.peek().copied() {
                             if (tokenizer.accepts)(raw_token.as_str(), next) {
                                 raw_token.push(next);
+                                // Manually advance the iterator because [`Iterator::peek`] does
+                                // not.
                                 let _ = input.next();
                             } else {
+                                // The tokenizer rejected the next character. `raw_token` is now
+                                // complete.
                                 break;
                             }
                         }
 
+                        // Translate `raw_token` into a [`Token`].
                         Ok((tokenizer.tokenize)(raw_token))
                     }
                 )
@@ -83,14 +91,15 @@ struct Tokenizer {
     tokenize: fn(raw: String) -> Option<Token>,
 }
 
+/// A lexical token.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Token {
-    LeftParen,
-    RightParen,
+    LParen,
+    RParen,
     Plus,
     Minus,
-    Slash,
     Star,
+    Slash,
     Number(String),
     Word(String),
 }
