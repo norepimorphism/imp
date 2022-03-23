@@ -1,3 +1,4 @@
+use crate::error::{self, Error};
 use std::fmt;
 
 /// Translates a raw string into lexical tokens.
@@ -32,7 +33,10 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
                 .map_or_else(
                     // The character was not accepted by any tokenizers, so it is considered
                     // invalid.
-                    || Err(Error::InvalidInput(new)),
+                    || Err(Error {
+                        kind: error::Kind::Invalid,
+                        class: error::Class::Char(Some(new)),
+                    }),
                     // A compatible tokenizer was found.
                     |tokenizer| {
                         let mut current_token = new.to_string();
@@ -70,21 +74,21 @@ pub fn lex(input: &str) -> Result<Vec<Token>, Error> {
 /// A tokenizer that accepts rational numbers.
 const RATIO_TOKENIZER: Tokenizer = Tokenizer {
     accepts: |current, new| {
-        if new.is_ascii_digit() {
+        // A rational number may include a digit or decimal point in any location, including the
+        // first and last character.
+        // TODO: Make decimal point configurable to a comma.
+        if new.is_ascii_digit() || (new == '.') {
             return true;
         }
 
         if current.is_empty() {
             // A number may be prefixed by its sign.
-            (new == '-') || (new == '+')
-        } else {
-            // A number may also include a decimal point in any location, including the first and
-            // last character.
-            // TODO: Make this configurable to a comma.
-            new == '.'
+            return (new == '-') || (new == '+');
         }
+
+        false
     },
-    tokenize: |raw| Some(Token::Number(raw)),
+    tokenize: |it| Some(Token::Ratio(it)),
 };
 
 /// A tokenizer that accepts string literals.
@@ -92,23 +96,22 @@ const STR_LIT_TOKENIZER: Tokenizer = Tokenizer {
     accepts: |current, new| {
         if current.is_empty() {
             // A string literal is prefixed by double quotes.
-            return new == '"';
-        }
-
-        if current.len() == 1 {
+            new == '"'
+        } else if current.len() == 1 {
             // The second character is always accepted, even in the case of an empty string literal
             // (i.e., "").
-            return true;
+            true
+        } else {
+            // The content of the string, as well as the final double quote, are accepted.
+            !current.ends_with('"')
         }
-
-        // The content of the string, as well as the final double quote, are accepted.
-        !current.ends_with('"')
     },
-    tokenize: |mut raw| {
-        raw.remove(0);
-        raw.pop();
+    tokenize: |mut it| {
+        // Remove the surrounding double quotes.
+        let _ = it.remove(0);
+        let _ = it.pop();
 
-        Some(Token::StrLit(raw))
+        Some(Token::StrLit(it))
     }
 };
 
@@ -128,7 +131,7 @@ const SYMBOL_TOKENIZER: Tokenizer = Tokenizer {
 
         false
     },
-    tokenize: |raw| Some(Token::Symbol(raw)),
+    tokenize: |it| Some(Token::Symbol(it)),
 };
 
 /// A tokenizer that consumes whitespace.
@@ -151,7 +154,7 @@ const COMMENT_TOKENIZER: Tokenizer = Tokenizer {
 
 struct Tokenizer {
     accepts: fn(current: &str, new: char) -> bool,
-    tokenize: fn(raw: String) -> Option<Token>,
+    tokenize: fn(it: String) -> Option<Token>,
 }
 
 /// A lexical token.
@@ -161,6 +164,10 @@ pub enum Token {
     LParen,
     /// A right, or closing, parenthesis.
     RParen,
+    /// A left, or opening, brace ({).
+    LBrace,
+    /// A right, or closing, brace (}).
+    RBrace,
     /// A plus sign (+).
     Plus,
     /// A minus sign (-).
@@ -172,22 +179,28 @@ pub enum Token {
     /// A dollar sign ($).
     Dollar,
     /// A rational number.
-    Number(String),
+    Ratio(String),
     /// A string literal.
     StrLit(String),
     /// A symbol.
     Symbol(String),
 }
 
-#[derive(Debug)]
-pub enum Error {
-    InvalidInput(char),
-}
-
-impl std::error::Error for Error {}
-
-impl fmt::Display for Error {
+impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
+        match self {
+            Self::LParen => write!(f, "'('"),
+            Self::RParen => write!(f, "')'"),
+            Self::LBrace => write!(f, "'{{'"),
+            Self::RBrace => write!(f, "'}}'"),
+            Self::Plus => write!(f, "'+'"),
+            Self::Minus => write!(f, "'-'"),
+            Self::Star => write!(f, "'*'"),
+            Self::Slash => write!(f, "'/'"),
+            Self::Dollar => write!(f, "'$'"),
+            Self::Ratio(it) => write!(f, "{}", it),
+            Self::StrLit(it) => write!(f, "\"{}\"", it),
+            Self::Symbol(it) => write!(f, "{}", it),
+        }
     }
 }

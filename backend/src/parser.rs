@@ -1,6 +1,6 @@
 mod input;
 
-use crate::lexer::Token;
+use crate::{error::{self, Error}, lexer::Token};
 use std::fmt;
 
 /// Translates lexical tokens into an [AST](`Ast`).
@@ -26,8 +26,7 @@ impl fmt::Display for Ast {
                     .iter()
                     .map(|operand| match operand {
                         Operand::Expr(it) => make_leaves(it),
-                        Operand::Number(it) => {
-                            let Number::Int(it) = it;
+                        Operand::Ratio(it) => {
                             Tree::new(it.to_string(), Vec::new())
                         }
                         Operand::StrLit(it) => Tree::new(it.content.clone(), Vec::new()),
@@ -38,7 +37,7 @@ impl fmt::Display for Ast {
         }
 
         Tree::new(
-            "*".to_string(),
+            "(root)".to_string(),
             self.exprs.iter().map(make_leaves).collect()
         )
         .fmt(f)
@@ -57,7 +56,10 @@ impl Ast {
                 Ok(expr) => {
                     exprs.push(expr);
                 }
-                Err(Error::ExpectedExpr) => {
+                Err(Error {
+                    kind: error::Kind::Expected,
+                    class: error::Class::Expr(_),
+                }) => {
                     break;
                 }
                 Err(e) => {
@@ -70,18 +72,36 @@ impl Ast {
             // All tokens have been processed.
             Ok(Self { exprs })
         } else {
-            Err(Error::ExpectedExpr)
+            Err(Error {
+                kind: error::Kind::Expected,
+                class: error::Class::Expr(None),
+            })
         }
     }
 }
 
 /// An expression.
-#[derive(Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Expr {
     /// The operation.
     pub operation: Operation,
     /// The operands.
     pub operands: Vec<Operand>,
+}
+
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "({} {})",
+            self.operation,
+            self.operands
+                .iter()
+                .map(|it| it.to_string())
+                .collect::<Vec<String>>()
+                .join(" ")
+        )
+    }
 }
 
 impl Expr {
@@ -92,13 +112,19 @@ impl Expr {
     ) -> Result<Self, Error> {
         // This is either the left parenthesis or the operation, depending on whether or not
         // parentheses are used.
-        let start = input.peek().ok_or_else(|| Error::ExpectedExpr)?;
+        let start = input.peek().ok_or_else(|| Error {
+            kind: error::Kind::Expected,
+            class: error::Class::Expr(None),
+        })?;
         let has_parens = *start == Token::LParen;
 
         // Only root-level expressions may omit parentheses; non-root expressions must be surrounded
         // by them.
         if !is_root && !has_parens {
-            return Err(Error::ExpectedToken(Token::LParen));
+            return Err(Error {
+                kind: error::Kind::Expected,
+                class: error::Class::Token(Some(Token::LParen)),
+            });
         }
 
         if has_parens {
@@ -110,8 +136,11 @@ impl Expr {
 
         let operation = input
             .next()
-            .ok_or_else(|| Error::ExpectedOperation)
-            .and_then(|ref token| Operation::parse(token))?;
+            .ok_or_else(|| Error {
+                kind: error::Kind::Expected,
+                class: error::Class::Operation(None),
+            })
+            .and_then(Operation::parse)?;
 
         let mut operands = Vec::new();
         loop {
@@ -119,7 +148,10 @@ impl Expr {
                 Ok(operand) => {
                     operands.push(operand);
                 }
-                Err(Error::ExpectedOperand) | Err(Error::InvalidOperand) => {
+                Err(Error {
+                    kind: _,
+                    class: error::Class::Operand(_),
+                }) => {
                     break;
                 }
                 Err(e) => {
@@ -139,131 +171,183 @@ impl Expr {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Operation {
     pub name: String,
 }
 
+impl fmt::Display for Operation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 impl Operation {
-    fn parse(input: &Token) -> Result<Self, Error> {
+    fn parse(input: Token) -> Result<Self, Error> {
         let name = match input {
             Token::Plus => Ok("add".to_string()),
             Token::Minus => Ok("sub".to_string()),
             Token::Star => Ok("mul".to_string()),
             Token::Slash => Ok("div".to_string()),
-            Token::Dollar => Ok("eval".to_string()),
-            Token::Symbol(name) => Ok(name.clone()),
-            _ => Err(Error::InvalidOperation),
+            Token::Dollar => todo!(),
+            Token::Symbol(name) => Ok(name),
+            _ => Err(Error {
+                kind: error::Kind::Invalid,
+                class: error::Class::Operation(Some(Operation { name: input.to_string() })),
+            }),
         }?;
 
         Ok(Self { name })
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Operand {
+    /// An [Expr](expression).
     Expr(Expr),
+    /// A number.
     Number(Number),
+    /// A string literal.
     StrLit(StrLit),
+    /// A symbol.
     Symbol(Symbol),
+}
+
+impl fmt::Display for Operand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Expr(it) => it.fmt(f),
+            Self::Ratio(it) => it.fmt(f),
+            Self::StrLit(it) => it.fmt(f),
+            Self::Symbol(it) => it.fmt(f),
+        }
+    }
 }
 
 impl Operand {
     fn parse<I: Iterator<Item = Token>>(input: &mut input::Stream<I>) -> Result<Self, Error> {
         let determinant = input
             .peek()
-            .ok_or_else(|| Error::ExpectedOperand)?;
+            .ok_or_else(|| Error {
+                kind: error::Kind::Expected,
+                class: error::Class::Operand(None),
+            })?;
 
         match determinant {
             Token::LParen => Expr::parse(input, false).map(Operand::Expr),
-            Token::Number(_) => Number::parse(input).map(Operand::Number),
+            Token::Ratio(_) => Ratio::parse(input).map(Operand::Ratio),
             Token::StrLit(_) => StrLit::parse(input).map(Operand::StrLit),
             Token::Symbol(_) => Symbol::parse(input).map(Operand::Symbol),
-            _ => Err(Error::InvalidOperand),
+            _ => Err(Error {
+                kind: error::Kind::Invalid,
+                class: error::Class::Operand(None),
+            }),
         }
     }
 }
 
-#[derive(Debug)]
 pub enum Number {
-    Int(u64)
+    Rational(Ratio)
 }
 
-impl Number {
+/// A rational number.
+#[derive(Clone, Debug)]
+pub struct Ratio {
+    pub value: f64,
+}
+
+impl fmt::Display for Ratio {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}
+
+impl Ratio {
     fn parse<I: Iterator<Item = Token>>(input: &mut input::Stream<I>) -> Result<Self, Error> {
         let number = input
             .next()
-            .ok_or_else(|| Error::ExpectedNumber)?;
+            .ok_or_else(|| Error {
+                kind: error::Kind::Expected,
+                class: error::Class::Ratio(None),
+            })?;
 
-        if let Token::Number(value) = number {
+        if let Token::Ratio(value) = number {
             value
-                .parse::<u64>()
-                .map_err(|_| Error::InvalidNumber)
-                .map(Self::Int)
+                .parse::<f64>()
+                .map_err(|_| Error {
+                    kind: error::Kind::Invalid,
+                    class: error::Class::Ratio(None),
+                })
+                .map(|value| Self { value })
         } else {
-            Err(Error::InvalidNumber)
+            Err(Error {
+                kind: error::Kind::Invalid,
+                class: error::Class::Ratio(None),
+            })
         }
     }
 }
 
-#[derive(Debug)]
+/// A string literal.
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct StrLit {
     pub content: String,
+}
+
+impl fmt::Display for StrLit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "\"{}\"", self.content)
+    }
 }
 
 impl StrLit {
     fn parse<I: Iterator<Item = Token>>(input: &mut input::Stream<I>) -> Result<Self, Error> {
         let lit = input
             .next()
-            .ok_or_else(|| Error::ExpectedStrLit)?;
+            .ok_or_else(|| Error {
+                kind: error::Kind::Expected,
+                class: error::Class::StrLit(None),
+            })?;
 
         if let Token::StrLit(content) = lit {
             Ok(Self { content })
         } else {
-            Err(Error::InvalidStrLit)
+            Err(Error {
+                kind: error::Kind::Invalid,
+                class: error::Class::StrLit(None),
+            })
         }
     }
 }
 
-#[derive(Debug)]
+/// A symbol.
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Symbol {
     pub name: String,
+}
+
+impl fmt::Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }
 
 impl Symbol {
     fn parse<I: Iterator<Item = Token>>(input: &mut input::Stream<I>) -> Result<Self, Error> {
         let symbol = input
             .next()
-            .ok_or_else(|| Error::ExpectedSymbol)?;
+            .ok_or_else(|| Error {
+                kind: error::Kind::Expected,
+                class: error::Class::Symbol(None),
+            })?;
 
         if let Token::Symbol(name) = symbol {
             Ok(Self { name })
         } else {
-            Err(Error::InvalidSymbol)
+            Err(Error {
+                kind: error::Kind::Invalid,
+                class: error::Class::Symbol(None),
+            })
         }
-    }
-}
-
-#[derive(Debug)]
-pub enum Error {
-    ExpectedExpr,
-    ExpectedNumber,
-    ExpectedOperand,
-    ExpectedOperation,
-    ExpectedStrLit,
-    ExpectedSymbol,
-    ExpectedToken(Token),
-    InvalidNumber,
-    InvalidOperand,
-    InvalidOperation,
-    InvalidStrLit,
-    InvalidSymbol,
-}
-
-impl std::error::Error for Error {}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
     }
 }

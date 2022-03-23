@@ -1,5 +1,4 @@
-use super::Error;
-use crate::lexer::Token;
+use crate::{error::{self, Error}, lexer::Token};
 use std::iter::Peekable;
 
 pub struct Stream<I: Iterator<Item = Token>>(Peekable<I>);
@@ -28,14 +27,20 @@ impl<I: Iterator<Item = Token>> Stream<I> {
     pub fn expect(&mut self, expected: &Token) -> Result<(), Error> {
         let actual = self
             .peek()
-            .ok_or_else(|| Error::ExpectedToken(expected.clone()))?;
+            .ok_or_else(|| Error {
+                kind: error::Kind::Expected,
+                class: error::Class::Token(None),
+            })?;
 
         if *actual == *expected {
-            let _ = self.next();
+            self.advance();
 
             Ok(())
         } else {
-            Err(Error::ExpectedToken(expected.clone()))
+            Err(Error {
+                kind: error::Kind::Expected,
+                class: error::Class::Token(None),
+            })
         }
     }
 }
