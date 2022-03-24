@@ -1,29 +1,27 @@
-use crate::{error::{self, Error}, saved::Saved};
+use crate::{error::{self, Error}, span::Span};
 use std::fmt;
 
 /// Translates a raw string into [lexical tokens](Token).
-pub fn lex(input: &str) -> Result<Vec<Saved<Token>>, Error> {
+pub fn lex(input: &str) -> Result<Vec<Span<Token>>, Error> {
     // Raw input.
     let mut input = input.chars().enumerate().peekable();
     // Tokenized output.
     let mut tokens = Vec::new();
 
     // Process the entire input string, one character at a time.
-    while let Some(next_token) = input
-        .next()
-        .map(|(pos, c)| Saved::new(c, pos))
-    {
-        let maybe_token = match next_token.inner {
+    while let Some((start_pos, next_c)) = input.next() {
+        let (token_len, maybe_token) = match next_c {
             // Single-character tokens.
-            '(' => Ok(Some(Token::LParen)),
-            ')' => Ok(Some(Token::RParen)),
-            '{' => Ok(Some(Token::LBrace)),
-            '}' => Ok(Some(Token::RBrace)),
-            '+' => Ok(Some(Token::Plus)),
-            '-' => Ok(Some(Token::Minus)),
-            '*' => Ok(Some(Token::Star)),
-            '/' => Ok(Some(Token::Slash)),
-            '$' => Ok(Some(Token::Dollar)),
+            // TODO: Eliminate repitition.
+            '(' => Ok((1, Some(Token::LParen))),
+            ')' => Ok((1, Some(Token::RParen))),
+            '{' => Ok((1, Some(Token::LBrace))),
+            '}' => Ok((1, Some(Token::RBrace))),
+            '+' => Ok((1, Some(Token::Plus))),
+            '-' => Ok((1, Some(Token::Minus))),
+            '*' => Ok((1, Some(Token::Star))),
+            '/' => Ok((1, Some(Token::Slash))),
+            '$' => Ok((1, Some(Token::Dollar))),
             // Multi-character tokens.
             _ => {
                 // Try each tokenizer in this order.
@@ -36,18 +34,18 @@ pub fn lex(input: &str) -> Result<Vec<Saved<Token>>, Error> {
                 ]
                 .into_iter()
                 // Select the first tokenizer to accept the given character.
-                .find(|tokenizer| (tokenizer.accepts)("", next_token.inner))
+                .find(|tokenizer| (tokenizer.accepts)("", next_c))
                 .map_or_else(
                     // The character was not accepted by any tokenizers, so it is considered
                     // invalid.
                     || Err(Error {
                         kind: error::Kind::Invalid,
                         class: error::Class::Char,
-                        pos: next_token.pos,
+                        range: start_pos..(start_pos + 1),
                     }),
                     // A compatible tokenizer was found.
                     |tokenizer| {
-                        let mut current_token = next_token.inner.to_string();
+                        let mut current_token = next_c.to_string();
 
                         // Continue processing characters with the selected tokenizer. Use
                         // [`Peekable::peek`] so that rejected characters may be processed again
@@ -66,14 +64,14 @@ pub fn lex(input: &str) -> Result<Vec<Saved<Token>>, Error> {
                         }
 
                         // Translate `current_token` into a [`Token`].
-                        Ok((tokenizer.tokenize)(current_token))
+                        Ok((current_token.len(), (tokenizer.tokenize)(current_token)))
                     },
                 )
             }
         }?;
 
         if let Some(token) = maybe_token {
-            tokens.push(Saved::new(token, next_token.pos));
+            tokens.push(Span::new(token, start_pos..(start_pos + token_len)));
         }
     }
 

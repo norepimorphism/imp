@@ -2,7 +2,7 @@ use crate::{
     error::{self, Error},
     lexer::Token,
     op::{Expr, Operand, Operation, StrLit, Symbol},
-    saved::{self, Saved},
+    span::{self, Span},
 };
 use std::fmt;
 
@@ -42,8 +42,8 @@ impl fmt::Display for Ast {
 
 impl Ast {
     /// Parses a tokenized input to create an AST.
-    pub fn parse(mut input: impl Iterator<Item = Saved<Token>>) -> Result<Self, Error> {
-        let input = saved::Iter::new(input.collect());
+    pub fn parse(input: impl Iterator<Item = Span<Token>>) -> Result<Self, Error> {
+        let mut input = span::Iter::new(input.collect());
         // Top-level expressions.
         let mut exprs = Vec::new();
 
@@ -56,7 +56,7 @@ impl Ast {
                 Err(Error {
                     kind: error::Kind::Expected,
                     class: error::Class::Expr,
-                    pos: _,
+                    range: _,
                 }) => {
                     break;
                 }
@@ -70,7 +70,7 @@ impl Ast {
             // All tokens have been processed.
             Ok(Self { exprs })
         } else {
-            Err(Error::expected(error::Class::Expr, input.next_pos()))
+            Err(Error::expected(error::Class::Expr, input.prev_range().unwrap_or_default()))
         }
     }
 }
@@ -78,20 +78,18 @@ impl Ast {
 impl Expr {
     /// Parses a tokenized input to create an expression.
     fn parse(
-        input: &mut saved::Iter<Token>,
+        input: &mut span::Iter<Token>,
         is_root: bool,
     ) -> Result<Self, Error> {
         // This is either the left parenthesis or the operation, depending on whether or not
         // parentheses are used.
-        let start = input
-            .peek()
-            .ok_or_else(|| Error::expected(error::Class::Expr, input.next_pos()))?;
+        let start = input.next_or(error::Class::Expr)?;
         let has_parens = start.inner == Token::LParen;
 
         // Only root-level expressions may omit parentheses; non-root expressions must be surrounded
         // by them.
         if !is_root && !has_parens {
-            return Err(Error::expected(error::Class::Token, input.next_pos()));
+            return Err(Error::expected(error::Class::Token, input.prev_range().unwrap_or_default()));
         }
 
         if has_parens {
@@ -102,8 +100,7 @@ impl Expr {
         }
 
         let operation = input
-            .next()
-            .ok_or_else(|| Error::expected(error::Class::Operation, input.next_pos()))
+            .next_or(error::Class::Operation)
             .and_then(Operation::parse)?;
 
         let mut operands = Vec::new();
@@ -115,7 +112,7 @@ impl Expr {
                 Err(Error {
                     kind: _,
                     class: error::Class::Operand,
-                    pos: _,
+                    range: _,
                 }) => {
                     break;
                 }
@@ -126,7 +123,7 @@ impl Expr {
         }
 
         if has_parens {
-            input.expect(&Token::RParen, error::Class::Token)?;
+            input.expect_or(&Token::RParen, error::Class::Token)?;
         }
 
         Ok(Self {
@@ -137,7 +134,7 @@ impl Expr {
 }
 
 impl Operation {
-    fn parse(input: Saved<Token>) -> Result<Self, Error> {
+    fn parse(input: Span<Token>) -> Result<Self, Error> {
         let name = match input.inner {
             Token::Plus => Ok("add".to_string()),
             Token::Minus => Ok("sub".to_string()),
@@ -148,7 +145,7 @@ impl Operation {
             _ => Err(Error {
                 kind: error::Kind::Invalid,
                 class: error::Class::Operation,
-                pos: input.pos,
+                range: input.range,
             }),
         }?;
 
@@ -157,44 +154,38 @@ impl Operation {
 }
 
 impl Operand {
-    fn parse(input: &mut saved::Iter<Token>) -> Result<Self, Error> {
-        let determinant = input
-            .peek()
-            .ok_or_else(|| Error::expected(error::Class::Operand, input.next_pos()))?;
+    fn parse(input: &mut span::Iter<Token>) -> Result<Self, Error> {
+        let determinant = input.peek_or(error::Class::Operand)?;
 
         match determinant.inner {
             Token::LParen => Expr::parse(input, false).map(Operand::Expr),
             Token::StrLit(_) => StrLit::parse(input).map(Operand::StrLit),
             Token::Symbol(_) => Symbol::parse(input).map(Operand::Symbol),
-            _ => Err(Error::expected(error::Class::Operand, determinant.pos)),
+            _ => Err(Error::expected(error::Class::Operand, determinant.range)),
         }
     }
 }
 
 impl StrLit {
-    fn parse(input: &mut saved::Iter<Token>) -> Result<Self, Error> {
-        let lit = input
-            .next()
-            .ok_or_else(|| Error::expected(error::Class::StrLit, input.prev_pos()))?;
+    fn parse(input: &mut span::Iter<Token>) -> Result<Self, Error> {
+        let lit = input.next_or(error::Class::StrLit)?;
 
         if let Token::StrLit(content) = lit.inner {
             Ok(Self { content })
         } else {
-            Err(Error::invalid(error::Class::StrLit, lit.pos))
+            Err(Error::invalid(error::Class::StrLit, lit.range))
         }
     }
 }
 
 impl Symbol {
-    fn parse(input: &mut saved::Iter<Token>) -> Result<Self, Error> {
-        let symbol = input
-            .next()
-            .ok_or_else(|| Error::expected(error::Class::Symbol, input.prev_pos()))?;
+    fn parse(input: &mut span::Iter<Token>) -> Result<Self, Error> {
+        let symbol = input.next_or(error::Class::Symbol)?;
 
         if let Token::Symbol(name) = symbol.inner {
             Ok(Self { name })
         } else {
-            Err(Error::invalid(error::Class::Symbol, symbol.pos))
+            Err(Error::invalid(error::Class::Symbol, symbol.range))
         }
     }
 }

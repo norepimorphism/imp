@@ -1,6 +1,6 @@
 //! A unified error interface.
 
-use std::fmt;
+use std::{fmt, ops::Range};
 
 /// An error.
 #[derive(Debug)]
@@ -9,25 +9,24 @@ pub struct Error {
     pub kind: Kind,
     /// The class causing the error.
     pub class: Class,
-    /// The position, in textual characters.
-    pub pos: usize,
+    pub range: Range<usize>,
 }
 
 impl std::error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {} @{}", self.kind, self.class, self.pos)
+        write!(f, "{} {} @ {}-{}", self.kind, self.class, self.range.start, self.range.end)
     }
 }
 
 impl Error {
-    pub fn expected(class: Class, pos: usize) -> Self {
-        Self { kind: Kind::Expected, class, pos }
+    pub fn expected(class: Class, range: Range<usize>) -> Self {
+        Self { kind: Kind::Expected, class, range }
     }
 
-    pub fn invalid(class: Class, pos: usize) -> Self {
-        Self { kind: Kind::Invalid, class, pos }
+    pub fn invalid(class: Class, range: Range<usize>) -> Self {
+        Self { kind: Kind::Invalid, class, range }
     }
 }
 
@@ -53,7 +52,7 @@ impl fmt::Display for Kind {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Class {
     /// A textual character.
     Char,

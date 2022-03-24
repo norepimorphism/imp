@@ -25,7 +25,7 @@ impl Interp {
         match expr.operation.name.as_str() {
             "let" => self.eval_let(operands),
             _ => {
-                Err(Error::invalid(error::Class::Operation))
+                Err(Error::invalid(error::Class::Operation, todo!()))
             }
         }
     }
@@ -41,9 +41,7 @@ impl Interp {
     }
 
     fn eval_let(&mut self, mut operands: impl Iterator<Item = Operand>) -> Result<(), Error> {
-        let alias = operands
-            .next()
-            .ok_or_else(|| Error::expected(error::Class::Operand))?;
+        let alias = operands.next_or(error::Class::Operand)?;
         let Operand::Symbol(alias) = alias else {
             return Err(Error::expected(error::Class::Symbol));
         };
