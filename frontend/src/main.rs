@@ -18,7 +18,7 @@ fn main() -> ExitCode {
 }
 
 fn main_impl() -> Result<(), ()> {
-    let mut interp = oracle_backend::interp::Interp::default();
+    // let mut interp = oracle_backend::interp::Interp::default();
 
     loop {
         print!("{} ", color(
@@ -40,14 +40,14 @@ fn main_impl() -> Result<(), ()> {
                 }
                 Cmd::PrintAliases => {
                     println!(
-                        "{}",
-                        interp.aliases
-                            .iter()
-                            .map(|(symbol, operand)| {
-                                format!("{} -> {}", symbol, operand)
-                            })
-                            .collect::<Vec<String>>()
-                            .join("\n")
+                        // "{}",
+                        // interp.aliases
+                        //     .iter()
+                        //     .map(|(symbol, operand)| {
+                        //         format!("{} -> {}", symbol, operand)
+                        //     })
+                        //     .collect::<Vec<String>>()
+                        //     .join("\n")
                     );
                 }
                 Cmd::PrintVersion => {
@@ -63,9 +63,9 @@ fn main_impl() -> Result<(), ()> {
 
         match oracle_backend::process(input) {
             Ok(ast) => {
-                if let Err(e) = interp.eval_ast(ast) {
-                    print_error(e);
-                }
+                // if let Err(e) = interp.eval_ast(ast) {
+                //     print_error(e);
+                // }
             }
             Err(e) => {
                 print_error(e);
@@ -129,5 +129,9 @@ enum Cmd {
 }
 
 fn print_usage() {
-    todo!()
+    println!("Commands:");
+    println!("  :h, :help               Displays this usage information.");
+    println!("  :a, :print-aliases      Prints all defined aliases.");
+    println!("  :v, :print-version      Prints the version number.");
+    println!("  :q, :quit               Exits the program.");
 }
