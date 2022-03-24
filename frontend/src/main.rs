@@ -74,7 +74,17 @@ fn main_impl() -> Result<(), ()> {
     }
 }
 
-fn print_error(e: impl std::error::Error) {
+fn print_error(e: oracle_backend::Error) {
+    eprint!("  {: ^1$}", " ", e.range.start);
+    eprintln!(
+        "{:^^1$}",
+        color(
+            Stream::Stderr,
+            "^".to_string(),
+            Style::new().bold().fg(Color::Cyan),
+        ),
+        e.range.end - e.range.start,
+    );
     eprintln!(
         "{}: {}",
         color(
