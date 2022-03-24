@@ -1,6 +1,6 @@
 // mod ty;
 
-use crate::{error::{self, Error}, parser::{Ast, Expr, Operand, Operation, Symbol}};
+use crate::{error::{self, Error}, op::{Expr, Operand, Symbol}, parser::Ast};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -23,13 +23,9 @@ impl Interp {
         let operands = operands.into_iter();
 
         match expr.operation.name.as_str() {
-            // "use" => self.eval_use(operands),
             "let" => self.eval_let(operands),
-            name @ _ => {
-                Err(Error {
-                    kind: error::Kind::Invalid,
-                    class: error::Class::Operation(Some(Operation { name: name.to_string() })),
-                })
+            _ => {
+                Err(Error::invalid(error::Class::Operation))
             }
         }
     }
@@ -44,30 +40,17 @@ impl Interp {
         }
     }
 
-    fn eval_use(&mut self, ns: &str) {
-
-    }
-
     fn eval_let(&mut self, mut operands: impl Iterator<Item = Operand>) -> Result<(), Error> {
         let alias = operands
             .next()
-            .ok_or_else(|| Error {
-                kind: error::Kind::Expected,
-                class: error::Class::Operand(None),
-            })?;
+            .ok_or_else(|| Error::expected(error::Class::Operand))?;
         let Operand::Symbol(alias) = alias else {
-            return Err(Error {
-                kind: error::Kind::Invalid,
-                class: error::Class::Operand(Some(alias)),
-            });
+            return Err(Error::expected(error::Class::Symbol));
         };
 
         let value = operands
             .next()
-            .ok_or_else(|| Error {
-                kind: error::Kind::Expected,
-                class: error::Class::Operand(None),
-            })?;
+            .ok_or_else(|| Error::expected(error::Class::Operand))?;
 
         let _ = self.aliases.insert(alias, value);
 

@@ -27,20 +27,14 @@ impl<I: Iterator<Item = Token>> Stream<I> {
     pub fn expect(&mut self, expected: &Token) -> Result<(), Error> {
         let actual = self
             .peek()
-            .ok_or_else(|| Error {
-                kind: error::Kind::Expected,
-                class: error::Class::Token(None),
-            })?;
+            .ok_or_else(|| Error::expected(error::Class::Token))?;
 
         if *actual == *expected {
             self.advance();
 
             Ok(())
         } else {
-            Err(Error {
-                kind: error::Kind::Expected,
-                class: error::Class::Token(None),
-            })
+            Err(Error::expected(error::Class::Token))
         }
     }
 }
