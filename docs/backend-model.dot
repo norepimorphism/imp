@@ -15,8 +15,8 @@ digraph {
         d [label="Interpreter"];
     }
 
-    a -> b [xlabel="textual input"];
+    a -> b [xlabel="input"];
     b -> c [xlabel="tokens"];
     c -> d [xlabel="AST"];
-    d -> a [xlabel="textual output"];
+    d -> a [xlabel="output"];
 }

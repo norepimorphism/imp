@@ -1,6 +1,6 @@
 # Architecture
 
-Oracle follows a frontend-backend design. The frontend accepts textual input, which the backend then translates into mathematics and returns the result back to the frontend, where the output is displayed.
+Oracle follows a frontend-backend design. The frontend accepts textual input, which the backend translates into mathematics and returns the result back to the frontend, where the textual and/or graphical output is displayed.
 
 ![](./backend-model.svg)
 
