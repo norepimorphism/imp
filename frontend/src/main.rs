@@ -1,3 +1,7 @@
+//! Interactive Mathematical Calculator (IMC).
+//!
+//!
+
 #![feature(process_exitcode_placeholder)]
 
 use ansi_term::{Color, Style};
@@ -6,7 +10,7 @@ use supports_color::Stream;
 
 fn main() -> ExitCode {
     if let Err(_) = main_impl() {
-        eprintln!("fatal error");
+        todo!();
         ExitCode::FAILURE
     } else {
         ExitCode::SUCCESS
@@ -14,8 +18,6 @@ fn main() -> ExitCode {
 }
 
 fn main_impl() -> Result<(), ()> {
-    println!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
-
     let mut interp = oracle_backend::interp::Interp::default();
 
     loop {
@@ -33,10 +35,10 @@ fn main_impl() -> Result<(), ()> {
 
         if let Some(cmd) = process_cmd(input) {
             match cmd {
-                Cmd::GetHelp => {
+                Cmd::Help => {
                     print_usage();
                 }
-                Cmd::ListAliases => {
+                Cmd::PrintAliases => {
                     println!(
                         "{}",
                         interp.aliases
@@ -46,7 +48,10 @@ fn main_impl() -> Result<(), ()> {
                             })
                             .collect::<Vec<String>>()
                             .join("\n")
-                    )
+                    );
+                }
+                Cmd::PrintVersion => {
+                    println!(env!("CARGO_PKG_VERSION"));
                 }
                 Cmd::Quit => {
                     return Ok(());
@@ -100,11 +105,14 @@ fn process_cmd(input: &str) -> Option<Cmd> {
     }
 
     match cmd {
-        "a" | "list-aliases" => {
-            Some(Cmd::ListAliases)
+        "h" | "help" => {
+            Some(Cmd::Help)
         }
-        "h" | "get-help" => {
-            Some(Cmd::GetHelp)
+        "a" | "print-aliases" => {
+            Some(Cmd::PrintAliases)
+        }
+        "v" | "print-version" => {
+            Some(Cmd::PrintVersion)
         }
         "q" | "quit" => {
             Some(Cmd::Quit)
@@ -114,8 +122,9 @@ fn process_cmd(input: &str) -> Option<Cmd> {
 }
 
 enum Cmd {
-    GetHelp,
-    ListAliases,
+    Help,
+    PrintAliases,
+    PrintVersion,
     Quit,
 }
 

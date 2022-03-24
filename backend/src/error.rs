@@ -5,31 +5,33 @@ use std::fmt;
 /// An error.
 #[derive(Debug)]
 pub struct Error {
-    /// The kind of error.
+    /// The kind.
     pub kind: Kind,
     /// The class causing the error.
     pub class: Class,
+    /// The position, in textual characters.
+    pub pos: usize,
 }
 
 impl std::error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.kind, self.class)
+        write!(f, "{} {} @{}", self.kind, self.class, self.pos)
     }
 }
 
 impl Error {
-    pub fn expected(class: Class) -> Self {
-        Self { kind: Kind::Expected, class }
+    pub fn expected(class: Class, pos: usize) -> Self {
+        Self { kind: Kind::Expected, class, pos }
     }
 
-    pub fn invalid(class: Class) -> Self {
-        Self { kind: Kind::Invalid, class }
+    pub fn invalid(class: Class, pos: usize) -> Self {
+        Self { kind: Kind::Invalid, class, pos }
     }
 }
 
-/// A kind of error.
+/// A kind of [error](Error).
 #[derive(Debug)]
 pub enum Kind {
     /// Something expected is missing.
@@ -65,7 +67,7 @@ pub enum Class {
     StrLit,
     /// A [symbol](crate::parser::Symbol).
     Symbol,
-    /// A lexical [token](crate::lexer::Token).
+    /// A [lexical token](crate::lexer::Token).
     Token,
 }
 
