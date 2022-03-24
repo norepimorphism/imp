@@ -1,0 +1,22 @@
+digraph {
+    overlap=scale;
+
+    subgraph cluster_0 {
+        label="Frontend";
+        color=red;
+        a [label="CLI"];
+    }
+
+    subgraph cluster_1 {
+        label="Backend";
+        color=blue;
+        b [label="Lexer"];
+        c [label="Parser"];
+        d [label="Interpreter"];
+    }
+
+    a -> b [xlabel="textual input"];
+    b -> c [xlabel="tokens"];
+    c -> d [xlabel="AST"];
+    d -> a [xlabel="textual output"];
+}
