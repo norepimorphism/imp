@@ -40,8 +40,8 @@ fn main_impl() -> Result<(), ()> {
                 .trim_start_matches(':')
                 // Remove line feed.
                 // TODO: This is only necessary because [`process_cmd`] is not smart enough to ignore
-                // whitespace, and so command matching fails. Ideally, [`process_cmd`] will have its own
-                // lexer and parser to manage these quirks.
+                // whitespace, and so command matching fails. Ideally, [`process_cmd`] will have its
+                // own lexer and parser to manage these quirks.
                 .trim_end();
 
             process_cmd(&interp, cmd);
@@ -107,6 +107,7 @@ fn process_cmd(interp: &Interp, cmd: &str) {
         "v" | "print-version" => {
             print_version()
         }
+        // TODO: Add moar commands!
         // TODO: Handle invalid commands.
         _ => ()
     }

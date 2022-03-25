@@ -1,14 +1,33 @@
 // mod ty;
 
-use crate::{error::{self, Error}, op::{Expr, Operand, Symbol}, parser::Ast};
+use crate::{
+    error::{self, Error},
+    op::{Expr, Operand, Operation, OperationId, Symbol},
+    parser::Ast,
+};
 use std::collections::HashMap;
 
-#[derive(Default)]
 pub struct Interp {
-    pub aliases: HashMap<Symbol, Operand>,
+    aliases: HashMap<Symbol, Operand>,
+    operations: HashMap<OperationId, Operation>,
+}
+
+impl Default for Interp {
+    fn default() -> Self {
+        Self {
+            aliases: HashMap::default(),
+            operations: HashMap::from_iter([
+
+            ]),
+        }
+    }
 }
 
 impl Interp {
+    pub fn aliases(&self) -> impl Iterator<Item = (&Symbol, &Operand)> {
+        self.aliases.iter()
+    }
+
     pub fn eval_ast(&mut self, ast: Ast) -> Result<(), Error> {
         for expr in ast.exprs {
             self.eval_expr(expr)?;
@@ -17,16 +36,19 @@ impl Interp {
         Ok(())
     }
 
-    pub fn eval_expr(&mut self, expr: Expr) -> Result<(), Error> {
-        let mut operands = expr.operands;
-        self.subst_aliases(&mut operands);
-        let operands = operands.into_iter();
+    pub fn eval_expr(&mut self, mut expr: Expr) -> Result<(), Error> {
+        self.subst_aliases(&mut expr.operands);
 
-        match expr.operation.name.as_str() {
-            "let" => self.eval_let(operands),
-            _ => {
-                Err(Error::invalid(error::Class::Operation, todo!()))
-            }
+        if let Some(operation) = self.operations.get(&expr.operation_id) {
+            let operands = expr.operands
+                .get(0..operation.operand_cnt)
+                // TODO: Handle this error.
+                .unwrap();
+
+            (operation.execute)(operands)
+        } else {
+            // TODO: Replace range with actual span range.
+            Err(Error::invalid(error::Class::OperationId, 0..1))
         }
     }
 
