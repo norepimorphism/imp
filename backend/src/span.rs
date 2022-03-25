@@ -1,10 +1,16 @@
 use crate::error::{self, Error};
-use std::ops::Range;
+use std::{fmt, ops::Range};
 
 #[derive(Clone)]
 pub struct Span<T> {
     pub inner: T,
     pub range: Range<usize>,
+}
+
+impl<T: fmt::Display> fmt::Display for Span<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}@[{}..{}]", self.inner, self.range.start, self.range.end)
+    }
 }
 
 impl<T> Span<T> {
@@ -38,12 +44,11 @@ impl<T> Iter<T> where Span<T>: Clone {
 
 impl<T: PartialEq> Iter<T> where Span<T>: Clone {
     pub fn expect_or(&mut self, expected: &T, class: error::Class) -> Result<Span<T>, Error> {
-        let actual = self.next_or(class)?;
+        let actual = self.next_or(class.clone())?;
         if actual.inner == *expected {
             Ok(actual)
         } else {
-            // TODO
-            Err(Error::expected(class, self.prev_range().unwrap_or_default()))
+            Err(Error::expected(class, actual.range))
         }
     }
 }
@@ -55,7 +60,7 @@ impl<T> Iter<T> where Span<T>: Clone {
         it: Option<Span<T>>
     ) -> Result<Span<T>, Error> {
         it.ok_or_else(|| {
-            Error::expected(class, self.prev_range().unwrap_or_default())
+            Error::expected(class, self.next_range())
         })
     }
 }
@@ -66,6 +71,8 @@ impl<T> Iter<T> {
     }
 }
 
+impl<T> ExactSizeIterator for Iter<T> where Span<T>: Clone {}
+
 impl<T> Iterator for Iter<T> where Span<T>: Clone {
     type Item = Span<T>;
 
@@ -75,14 +82,27 @@ impl<T> Iterator for Iter<T> where Span<T>: Clone {
 
         maybe_saved
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.items.len() - self.idx;
+        (len, Some(len))
+    }
 }
 
 impl<T> Iter<T> {
-    pub fn prev_range(&self) -> Option<Range<usize>> {
-        self.items.get(self.idx.saturating_sub(1)).map(|it| it.range.clone())
+    pub fn prev_range(&self) -> Range<usize> {
+        self.items
+            .get(self.idx.saturating_sub(1))
+            .map(|it| it.range.clone())
+            .unwrap_or(0..1)
     }
 
-    pub fn next_range(&self) -> Option<Range<usize>> {
-        self.peek().map(|it| it.range.clone())
+    pub fn next_range(&self) -> Range<usize> {
+        self.peek()
+            .map(|it| it.range.clone())
+            .unwrap_or_else(|| {
+                let prev = self.prev_range();
+                (prev.start + 1)..(prev.end + 1)
+            })
     }
 }

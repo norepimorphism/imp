@@ -1,13 +1,18 @@
+use crate::error::Error;
 use std::fmt;
 
-/// An operation.
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Operation {
+    pub operand_cnt: usize,
+    pub execute: fn(operands: &[Operand]) -> Result<(), Error>,
+}
+
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+pub struct OperationId {
     /// The name.
     pub name: String,
 }
 
-impl fmt::Display for Operation {
+impl fmt::Display for OperationId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
@@ -40,8 +45,8 @@ impl fmt::Display for Operand {
 /// An expression.
 #[derive(Clone, Debug, Default)]
 pub struct Expr {
-    /// The operation.
-    pub operation: Operation,
+    /// The operation ID.
+    pub operation_id: OperationId,
     /// The operands.
     pub operands: Vec<Operand>,
 }
@@ -51,7 +56,7 @@ impl fmt::Display for Expr {
         write!(
             f,
             "({} {})",
-            self.operation,
+            self.operation_id,
             self.operands
                 .iter()
                 .map(|it| it.to_string())

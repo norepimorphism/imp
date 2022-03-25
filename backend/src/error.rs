@@ -1,5 +1,6 @@
 //! A unified error interface.
 
+use crate::lexer::Token;
 use std::{fmt, ops::Range};
 
 /// An error.
@@ -52,7 +53,7 @@ impl fmt::Display for Kind {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum Class {
     /// A textual character.
     Char,
@@ -60,31 +61,33 @@ pub enum Class {
     Expr,
     /// An [operand](crate::parser::Operand).
     Operand,
-    /// An [operation](crate::parser::Operation).
-    Operation,
+    /// An [operation ID](crate::op::Id).
+    OperationId,
     /// A [string literal](crate::parser::StrLit).
     StrLit,
     /// A [symbol](crate::parser::Symbol).
     Symbol,
     /// A [lexical token](crate::lexer::Token).
-    Token,
+    Token(Option<Token>),
 }
 
 impl fmt::Display for Class {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Char => "character",
-                Self::Expr => "expression",
-                Self::Operand => "operand",
-                Self::Operation => "operation",
-                Self::StrLit => "string literal",
-                Self::Symbol => "symbol",
-                Self::Token =>"token",
-            }
-        )
+        match self {
+            Self::Char => write!(f, "character"),
+            Self::Expr => write!(f, "expression"),
+            Self::Operand => write!(f, "operand"),
+            Self::OperationId => write!(f, "operation"),
+            Self::StrLit => write!(f, "string literal"),
+            Self::Symbol => write!(f, "symbol"),
+            Self::Token(maybe) => {
+                write!(f, "token")?;
+                if let Some(it) = maybe {
+                    write!(f, " {}", it)?;
+                }
 
+                Ok(())
+            }
+        }
     }
 }

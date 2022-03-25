@@ -1,7 +1,7 @@
 use crate::{
     error::{self, Error},
     lexer::Token,
-    op::{Expr, Operand, Operation, StrLit, Symbol},
+    op::{Expr, Operand, OperationId, StrLit, Symbol},
     span::{self, Span},
 };
 use std::fmt;
@@ -21,7 +21,7 @@ impl fmt::Display for Ast {
 
         fn make_leaves(expr: &Expr) -> Tree<String> {
             Tree::new(
-                expr.operation.name.clone(),
+                expr.operation_id.name.clone(),
                 expr.operands
                     .iter()
                     .map(|operand| match operand {
@@ -33,7 +33,7 @@ impl fmt::Display for Ast {
         }
 
         Tree::new(
-            "(root)".to_string(),
+            "AST".to_string(),
             self.exprs.iter().map(make_leaves).collect()
         )
         .fmt(f)
@@ -43,35 +43,17 @@ impl fmt::Display for Ast {
 impl Ast {
     /// Parses a tokenized input to create an AST.
     pub fn parse(input: impl Iterator<Item = Span<Token>>) -> Result<Self, Error> {
+        // Tokenized input.
         let mut input = span::Iter::new(input.collect());
         // Top-level expressions.
         let mut exprs = Vec::new();
 
-        // Parse expressions until [`Expr::parse`] fails.
-        loop {
-            match Expr::parse(&mut input, true) {
-                Ok(expr) => {
-                    exprs.push(expr);
-                }
-                Err(Error {
-                    kind: error::Kind::Expected,
-                    class: error::Class::Expr,
-                    range: _,
-                }) => {
-                    break;
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-            }
+        // Parse expressions until all tokens have been processed.
+        while !input.is_empty() {
+            exprs.push(Expr::parse(&mut input, true)?);
         }
 
-        if input.peek().is_none() {
-            // All tokens have been processed.
-            Ok(Self { exprs })
-        } else {
-            Err(Error::expected(error::Class::Expr, input.prev_range().unwrap_or_default()))
-        }
+        Ok(Self { exprs })
     }
 }
 
@@ -83,13 +65,16 @@ impl Expr {
     ) -> Result<Self, Error> {
         // This is either the left parenthesis or the operation, depending on whether or not
         // parentheses are used.
-        let start = input.next_or(error::Class::Expr)?;
+        let start = input.peek_or(error::Class::Expr)?;
         let has_parens = start.inner == Token::LParen;
 
         // Only root-level expressions may omit parentheses; non-root expressions must be surrounded
         // by them.
         if !is_root && !has_parens {
-            return Err(Error::expected(error::Class::Token, input.prev_range().unwrap_or_default()));
+            return Err(Error::expected(
+                error::Class::Token(Some(Token::LParen)),
+                start.range,
+            ));
         }
 
         if has_parens {
@@ -99,41 +84,43 @@ impl Expr {
             // The next token is now the operation.
         }
 
-        let operation = input
-            .next_or(error::Class::Operation)
-            .and_then(Operation::parse)?;
+        let operation_id = input
+            .next_or(error::Class::OperationId)
+            .and_then(OperationId::parse)?;
 
         let mut operands = Vec::new();
+
+        // Parse operands until all tokens within the expression have been processed.
         loop {
-            match Operand::parse(input) {
-                Ok(operand) => {
-                    operands.push(operand);
+            // TODO: Clean this up.
+            match input.peek() {
+                Some(it) => {
+                    if has_parens && (it.inner == Token::RParen) {
+                        break;
+                    }
                 }
-                Err(Error {
-                    kind: _,
-                    class: error::Class::Operand,
-                    range: _,
-                }) => {
+                None => {
                     break;
                 }
-                Err(e) => {
-                    return Err(e);
-                }
             }
+
+            // TODO: [`Operand::parse`] *must* advance the iterator, or else this loop will execute
+            // indefinitely.
+            operands.push(Operand::parse(input)?);
         }
 
         if has_parens {
-            input.expect_or(&Token::RParen, error::Class::Token)?;
+            input.expect_or(&Token::RParen, error::Class::Token(Some(Token::RParen)))?;
         }
 
         Ok(Self {
-            operation,
+            operation_id,
             operands,
         })
     }
 }
 
-impl Operation {
+impl OperationId {
     fn parse(input: Span<Token>) -> Result<Self, Error> {
         let name = match input.inner {
             Token::Plus => Ok("add".to_string()),
@@ -144,7 +131,7 @@ impl Operation {
             Token::Symbol(name) => Ok(name),
             _ => Err(Error {
                 kind: error::Kind::Invalid,
-                class: error::Class::Operation,
+                class: error::Class::OperationId,
                 range: input.range,
             }),
         }?;
