@@ -61,8 +61,10 @@ pub enum Class {
     Expr,
     /// An [operand](crate::parser::Operand).
     Operand,
-    /// An [operation ID](crate::op::Id).
+    /// An [operation ID](crate::parser::OperationId).
     OperationId,
+    /// A [rational number](crate::parser::Rational)
+    Rational,
     /// A [string literal](crate::parser::StrLit).
     StrLit,
     /// A [symbol](crate::parser::Symbol).
@@ -78,6 +80,7 @@ impl fmt::Display for Class {
             Self::Expr => write!(f, "expression"),
             Self::Operand => write!(f, "operand"),
             Self::OperationId => write!(f, "operation"),
+            Self::Rational => write!(f, "rational number"),
             Self::StrLit => write!(f, "string literal"),
             Self::Symbol => write!(f, "symbol"),
             Self::Token(maybe) => {

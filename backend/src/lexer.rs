@@ -36,6 +36,7 @@ fn lex_ch(
         '*' => Ok((1, Some(Token::Star))),
         '/' => Ok((1, Some(Token::Slash))),
         '$' => Ok((1, Some(Token::Dollar))),
+        '#' => Ok((1, Some(Token::Hash))),
         // Multi-character tokens.
         _ => {
             // Try each tokenizer in this order.
@@ -112,6 +113,8 @@ pub enum Token {
     Slash,
     /// A dollar sign (`$`).
     Dollar,
+    /// A hash sign (`#`).
+    Hash,
     /// A rational number.
     Rational(String),
     /// A string literal.
@@ -132,6 +135,7 @@ impl fmt::Display for Token {
             Self::Star => write!(f, "'*'"),
             Self::Slash => write!(f, "'/'"),
             Self::Dollar => write!(f, "'$'"),
+            Self::Hash => write!(f, "'#'"),
             Self::Rational(it) => write!(f, "{}", it),
             Self::StrLit(it) => write!(f, "\"{}\"", it),
             Self::Symbol(it) => write!(f, "{}", it),
