@@ -1,10 +1,10 @@
 [package]
-name = "oracle-frontend"
+name = "imp-frontend"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 ansi_term = "0.12"
-oracle-backend = { name = "oracle", path = "../backend" }
+imp-backend = { path = "../backend" }
 supports-color = "1.3"
 viuer = "0.6"

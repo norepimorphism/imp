@@ -1,6 +1,6 @@
 # Architecture
 
-Oracle follows a frontend-backend design. The frontend accepts textual input, which the backend translates into mathematics and returns the result back to the frontend, where the textual and/or graphical output is displayed.
+IMP follows a frontend-backend design. The frontend is an interactive shell program that forwards textual input to the backend, which lexes, parses, and evaulates its input as a mathematical expression before returning results back to the frontend in either textual or graphical form.
 
 ![](./backend-model.svg)
 
@@ -9,8 +9,9 @@ Oracle follows a frontend-backend design. The frontend accepts textual input, wh
 
 ## Backend
 
-The backend follows a traditional compiler model:
+The backend follows a traditional interpreter model:
 
 1. The lexer tokenizes source code, stripping comments and whitespace in the process.
-2. The parser assigns meaning to the tokens by grouping them into expressions.
+2. The parser assigns meaning to these tokens by grouping them into expressions.
+3. These expressions are transformed across multiple intermediate passes.
 3. The interpreter evaluates each expression.
