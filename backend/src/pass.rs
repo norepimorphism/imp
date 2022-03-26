@@ -1,6 +1,10 @@
 use crate::parser::{Expr, Operand, OperationId};
 
-pub fn resolve_pseudo_operations(expr: &mut Expr) {
+pub fn prep(ast: &mut Expr) {
+    resolve_pseudo_operations(ast);
+}
+
+fn resolve_pseudo_operations(expr: &mut Expr) {
     if is_pseudo_operation(&expr.operation_id) {
         if let Some(first_operand) = expr.operands.first() {
             let ext = match first_operand {

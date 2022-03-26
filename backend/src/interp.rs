@@ -2,7 +2,6 @@ mod operation;
 
 use crate::{
     error::{self, Error},
-    parser::Ast,
     parser::{Expr, Operand, OperationId, Symbol},
 };
 use std::collections::HashMap;
@@ -35,13 +34,6 @@ impl Interp {
         self.aliases.iter()
     }
 
-    pub fn eval_ast(&mut self, ast: Ast) -> Result<Vec<Operand>, Error> {
-        ast.exprs
-            .into_iter()
-            .map(|expr| self.eval_expr(expr))
-            .collect()
-    }
-
     pub fn eval_expr(&mut self, mut expr: Expr) -> Result<Operand, Error> {
         self.subst_aliases(&mut expr.operands);
 
@@ -50,6 +42,16 @@ impl Interp {
         } else {
             // TODO: Replace range with actual span range.
             Err(Error::invalid(error::Class::OperationId, 0..1))
+        }
+    }
+
+    fn subst_aliases(&self, operands: &mut [Operand]) {
+        for operand in operands {
+            if let Operand::Symbol(ref symbol) = operand {
+                if let Some(value) = self.aliases.get(symbol) {
+                    *operand = value.clone();
+                }
+            }
         }
     }
 
@@ -79,16 +81,6 @@ impl Interp {
         }
 
         Ok(last_result.unwrap())
-    }
-
-    fn subst_aliases(&self, operands: &mut [Operand]) {
-        for operand in operands {
-            if let Operand::Symbol(ref symbol) = operand {
-                if let Some(value) = self.aliases.get(symbol) {
-                    *operand = value.clone();
-                }
-            }
-        }
     }
 
     // fn eval_let(&mut self, mut operands: impl Iterator<Item = Operand>) -> Result<(), Error> {

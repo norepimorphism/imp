@@ -5,57 +5,32 @@ use crate::{
 };
 use std::fmt;
 
-/// An abstract syntax tree (AST).
-#[derive(Debug, Default)]
-pub struct Ast {
-    /// Top-level expressions.
-    pub exprs: Vec<Expr>,
+pub fn fmt_tree(f: &mut fmt::Formatter<'_>, expr: &Expr) -> fmt::Result {
+    use std::fmt::Display as _;
+
+    make_tree(expr).fmt(f)
 }
 
-impl fmt::Display for Ast {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use termtree::Tree;
+fn make_tree(expr: &Expr) -> termtree::Tree<String> {
+    use termtree::Tree;
 
-        // TODO: Clean this up; document.
+    // TODO: Clean this up; document.
 
-        fn make_leaves(expr: &Expr) -> Tree<String> {
-            Tree::new(
-                expr.operation_id.name.clone(),
-                expr.operands
-                    .iter()
-                    .map(|operand| match operand {
-                        Operand::Expr(it) => make_leaves(it),
-                        it @ _ => Tree::new(it.to_string(), Vec::new()),
-                    })
-                    .collect(),
-            )
-        }
-
-        Tree::new(
-            "AST".to_string(),
-            self.exprs.iter().map(make_leaves).collect(),
-        )
-        .fmt(f)
-    }
+    Tree::new(
+        expr.operation_id.name.clone(),
+        expr.operands
+            .iter()
+            .map(|operand| match operand {
+                Operand::Expr(it) => make_tree(it),
+                it @ _ => Tree::new(it.to_string(), Vec::new()),
+            })
+            .collect(),
+    )
 }
 
-impl Ast {
-    /// Parses a tokenized input to create an AST.
-    pub fn parse(input: impl Iterator<Item = Span<Token>>) -> Result<Self, Error> {
-        // Tokenized input.
-        let mut input = span::Iter::new(input.collect());
-        // Top-level expressions.
-        let mut exprs = Vec::new();
-
-        // Parse expressions until all tokens have been processed.
-        while !input.is_empty() {
-            // TODO: [`Expr::parse`] *must* advance the iterator, or else this loop will execute
-            // indefinitely.
-            exprs.push(Expr::parse(&mut input, true)?);
-        }
-
-        Ok(Self { exprs })
-    }
+/// Parses a tokenized input to create an AST.
+pub fn parse(input: impl Iterator<Item = Span<Token>>) -> Result<Expr, Error> {
+    Expr::parse(&mut span::Iter::new(input.collect()), true)
 }
 
 /// An expression.

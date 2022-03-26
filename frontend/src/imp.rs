@@ -1,11 +1,9 @@
 use imp_backend::{parser::Operand, Interp};
 
 pub fn process(interp: &mut Interp, input: &str) {
-    match imp_backend::process(input).and_then(|ast| interp.eval_ast(ast)) {
-        Ok(ops) => {
-            for op in ops {
-                print_result(op);
-            }
+    match imp_backend::process(interp, input) {
+        Ok(op) => {
+            print_result(op);
 
             // demo_plot();
         }
