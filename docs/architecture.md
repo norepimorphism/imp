@@ -2,10 +2,11 @@
 
 IMP follows a frontend-backend design. The frontend is an interactive shell program that forwards textual input to the backend, which lexes, parses, and evaulates its input as a mathematical expression before returning results back to the frontend in either textual or graphical form.
 
-![](./backend-model.svg)
-
+![](high-level-architecture.dot.svg)
 
 ## Frontend
+
+The frontend crate provided in this workspace is a reference implementation.
 
 ## Backend
 
