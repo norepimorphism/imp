@@ -7,7 +7,10 @@
 mod cmd;
 mod imp;
 
-use std::{io::{self, Write as _}, process::ExitCode};
+use std::{
+    io::{self, Write as _},
+    process::ExitCode,
+};
 
 fn main() -> ExitCode {
     main_impl();
@@ -34,11 +37,14 @@ fn do_shell(interp: &mut imp_backend::Interp) {
 }
 
 fn print_shell_prompt() {
-    print!("{} ", color(
-        supports_color::Stream::Stdout,
-        ">".to_string(),
-        ansi_term::Style::new().bold().fg(ansi_term::Color::Green),
-    ));
+    print!(
+        "{} ",
+        color(
+            supports_color::Stream::Stdout,
+            ">".to_string(),
+            ansi_term::Style::new().bold().fg(ansi_term::Color::Green),
+        )
+    );
 }
 
 fn read_user_input() -> String {

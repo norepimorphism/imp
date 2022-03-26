@@ -2,8 +2,8 @@ mod operation;
 
 use crate::{
     error::{self, Error},
-    parser::{Expr, Operand, OperationId, Symbol},
     parser::Ast,
+    parser::{Expr, Operand, OperationId, Symbol},
 };
 use std::collections::HashMap;
 
@@ -14,13 +14,14 @@ pub struct Interp {
 
 impl Default for Interp {
     fn default() -> Self {
-        let operations = [
-            ("add.rational", operation::ADD_RATIONAL),
-        ]
-        .map(|(name, operation)| (
-            OperationId { name: name.to_string() },
-            operation,
-        ));
+        let operations = [("add.rational", operation::ADD_RATIONAL)].map(|(name, operation)| {
+            (
+                OperationId {
+                    name: name.to_string(),
+                },
+                operation,
+            )
+        });
 
         Self {
             aliases: HashMap::default(),
@@ -52,7 +53,10 @@ impl Interp {
         }
     }
 
-    fn eval_operation_with_operands(operation: &Operation, mut operands: Vec<Operand>) -> Result<Operand, Error> {
+    fn eval_operation_with_operands(
+        operation: &Operation,
+        mut operands: Vec<Operand>,
+    ) -> Result<Operand, Error> {
         let expected_operand_cnt = operation.operand_cnt;
         let actual_operand_cnt = operands.len();
 

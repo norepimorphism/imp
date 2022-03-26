@@ -16,9 +16,7 @@ pub fn process<'a>(interp: &imp_backend::Interp, cmd: &'a str) {
         }
         // TODO: Add moar commands!
         // TODO: Handle invalid commands.
-        _ => {
-
-        }
+        _ => {}
     }
 }
 
@@ -47,10 +45,9 @@ fn print_usage() {
 fn print_interp_aliases(interp: &imp_backend::Interp) {
     println!(
         "{}",
-        interp.aliases()
-            .map(|(symbol, operand)| {
-                format!("{} -> {}", symbol, operand)
-            })
+        interp
+            .aliases()
+            .map(|(symbol, operand)| format!("{} -> {}", symbol, operand))
             .collect::<Vec<String>>()
             .join("\n")
     );

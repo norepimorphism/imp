@@ -1,4 +1,4 @@
-use imp_backend::{Interp, parser::Operand};
+use imp_backend::{parser::Operand, Interp};
 
 pub fn process(interp: &mut Interp, input: &str) {
     match imp_backend::process(input).and_then(|ast| interp.eval_ast(ast)) {
@@ -38,7 +38,6 @@ fn print_result(op: Operand) {
 //         .caption("y=x^2", ("sans-serif", 50).into_font())
 //         .build_cartesian_2d(-1f32..1f32, -0.1f32..1f32)
 //         .unwrap();
-
 
 //     chart.configure_mesh().draw().unwrap();
 
@@ -84,7 +83,8 @@ fn print_span(range: &std::ops::Range<usize>) {
             "^".to_string(),
             ansi_term::Style::new().bold().fg(ansi_term::Color::Cyan),
         ),
-        range.end
+        range
+            .end
             .checked_sub(range.start)
             .expect("span range is inverted"),
     );

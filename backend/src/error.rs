@@ -23,11 +23,19 @@ impl fmt::Display for Error {
 
 impl Error {
     pub fn expected(class: Class, range: Range<usize>) -> Self {
-        Self { kind: Kind::Expected, class, range }
+        Self {
+            kind: Kind::Expected,
+            class,
+            range,
+        }
     }
 
     pub fn invalid(class: Class, range: Range<usize>) -> Self {
-        Self { kind: Kind::Invalid, class, range }
+        Self {
+            kind: Kind::Invalid,
+            class,
+            range,
+        }
     }
 }
 

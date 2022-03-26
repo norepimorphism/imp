@@ -1,4 +1,7 @@
-use crate::{error::{self, Error}, span::Span};
+use crate::{
+    error::{self, Error},
+    span::Span,
+};
 use std::{fmt, iter::Peekable};
 
 /// Translates a raw string into [lexical tokens](Token).
@@ -53,11 +56,13 @@ fn lex_ch(
             .map_or_else(
                 // The character was not accepted by any tokenizers, so it is considered
                 // invalid.
-                || Err(Error {
-                    kind: error::Kind::Invalid,
-                    class: error::Class::Char,
-                    range: ch_pos..(ch_pos + 1),
-                }),
+                || {
+                    Err(Error {
+                        kind: error::Kind::Invalid,
+                        class: error::Class::Char,
+                        range: ch_pos..(ch_pos + 1),
+                    })
+                },
                 // A compatible tokenizer was found.
                 |tokenizer| lex_ch_with_tokenizer(input, tokenizer, ch),
             )
@@ -184,7 +189,7 @@ const STR_LIT_TOKENIZER: Tokenizer = Tokenizer {
         let _ = it.pop();
 
         Some(Token::StrLit(it))
-    }
+    },
 };
 
 /// A tokenizer that accepts symbols.

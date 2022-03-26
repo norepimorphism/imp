@@ -33,7 +33,7 @@ impl fmt::Display for Ast {
 
         Tree::new(
             "AST".to_string(),
-            self.exprs.iter().map(make_leaves).collect()
+            self.exprs.iter().map(make_leaves).collect(),
         )
         .fmt(f)
     }
@@ -84,10 +84,7 @@ impl fmt::Display for Expr {
 
 impl Expr {
     /// Parses a tokenized input to create an expression.
-    fn parse(
-        input: &mut span::Iter<Token>,
-        is_root: bool,
-    ) -> Result<Self, Error> {
+    fn parse(input: &mut span::Iter<Token>, is_root: bool) -> Result<Self, Error> {
         // This is either the left parenthesis or the operation, depending on whether or not
         // parentheses are used.
         let start = input.peek_or(error::Class::Expr)?;
@@ -96,7 +93,10 @@ impl Expr {
         // Only root-level expressions may omit parentheses; non-root expressions must be surrounded
         // by them.
         if !is_root && !has_parens {
-            return Err(Error::expected(error::Class::Token(Some(Token::LParen)), start.range));
+            return Err(Error::expected(
+                error::Class::Token(Some(Token::LParen)),
+                start.range,
+            ));
         }
 
         if has_parens {
@@ -260,7 +260,9 @@ macro_rules! impl_parse_for_newtype {
                 let input = input.next_or(error::Class::$ty)?;
 
                 if let Token::$ty($field_name) = input.inner {
-                    Ok(Self { $field_name: $field_def })
+                    Ok(Self {
+                        $field_name: $field_def,
+                    })
                 } else {
                     Err(Error::invalid(error::Class::$ty, input.range))
                 }
