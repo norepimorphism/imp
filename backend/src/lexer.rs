@@ -1,5 +1,5 @@
 use crate::{error::{self, Error}, span::Span};
-use std::fmt;
+use std::{fmt, iter::Peekable};
 
 /// Translates a raw string into [lexical tokens](Token).
 pub fn lex(input: &str) -> Result<Vec<Span<Token>>, Error> {
@@ -10,72 +10,85 @@ pub fn lex(input: &str) -> Result<Vec<Span<Token>>, Error> {
 
     // Process the entire input string, one character at a time.
     while let Some((ch_pos, ch)) = input.next() {
-        let (token_len, maybe_token) = match ch {
-            // Single-character tokens.
-            // TODO: Eliminate repitition.
-            '(' => Ok((1, Some(Token::LParen))),
-            ')' => Ok((1, Some(Token::RParen))),
-            '{' => Ok((1, Some(Token::LBrace))),
-            '}' => Ok((1, Some(Token::RBrace))),
-            '+' => Ok((1, Some(Token::Plus))),
-            '-' => Ok((1, Some(Token::Minus))),
-            '*' => Ok((1, Some(Token::Star))),
-            '/' => Ok((1, Some(Token::Slash))),
-            '$' => Ok((1, Some(Token::Dollar))),
-            // Multi-character tokens.
-            _ => {
-                // Try each tokenizer in this order.
-                [
-                    RATIONAL_TOKENIZER,
-                    STR_LIT_TOKENIZER,
-                    SYMBOL_TOKENIZER,
-                    WHITESPACE_TOKENIZER,
-                    COMMENT_TOKENIZER,
-                ]
-                .into_iter()
-                // Select the first tokenizer to accept the given character.
-                .find(|tokenizer| (tokenizer.accepts)("", ch))
-                .map_or_else(
-                    // The character was not accepted by any tokenizers, so it is considered
-                    // invalid.
-                    || Err(Error {
-                        kind: error::Kind::Invalid,
-                        class: error::Class::Char,
-                        range: ch_pos..(ch_pos + 1),
-                    }),
-                    // A compatible tokenizer was found.
-                    |tokenizer| {
-                        let mut raw_token = ch.to_string();
-
-                        // Continue processing characters with the selected tokenizer. Use
-                        // [`Peekable::peek`] so that rejected characters may be processed again
-                        // through a different tokenizer.
-                        while let Some((_, ch)) = input.peek().copied() {
-                            if (tokenizer.accepts)(raw_token.as_str(), ch) {
-                                raw_token.push(ch);
-                                // Manually advance the iterator because [`Peekable::peek`] does
-                                // not.
-                                let _ = input.next();
-                            } else {
-                                // The tokenizer rejected the new character. `current_token` is now
-                                // complete.
-                                break;
-                            }
-                        }
-
-                        // Translate `raw_token` into a [`Token`].
-                        Ok((raw_token.len(), (tokenizer.tokenize)(raw_token)))
-                    },
-                )
-            }
-        }?;
-
+        let (token_len, maybe_token) = lex_ch(&mut input, ch_pos, ch)?;
         if let Some(token) = maybe_token {
             tokens.push(Span::new(token, ch_pos..(ch_pos + token_len)));
         }
     }
 
     Ok(tokens)
+}
+
+fn lex_ch(
+    input: &mut Peekable<impl Iterator<Item = (usize, char)>>,
+    ch_pos: usize,
+    ch: char,
+) -> Result<(usize, Option<Token>), Error> {
+    match ch {
+        // Single-character tokens.
+        // TODO: Eliminate repitition.
+        '(' => Ok((1, Some(Token::LParen))),
+        ')' => Ok((1, Some(Token::RParen))),
+        '{' => Ok((1, Some(Token::LBrace))),
+        '}' => Ok((1, Some(Token::RBrace))),
+        '+' => Ok((1, Some(Token::Plus))),
+        '-' => Ok((1, Some(Token::Minus))),
+        '*' => Ok((1, Some(Token::Star))),
+        '/' => Ok((1, Some(Token::Slash))),
+        '$' => Ok((1, Some(Token::Dollar))),
+        // Multi-character tokens.
+        _ => {
+            // Try each tokenizer in this order.
+            [
+                RATIONAL_TOKENIZER,
+                STR_LIT_TOKENIZER,
+                SYMBOL_TOKENIZER,
+                WHITESPACE_TOKENIZER,
+                COMMENT_TOKENIZER,
+            ]
+            .iter()
+            // Select the first tokenizer to accept the given character.
+            .find(|tokenizer| (tokenizer.accepts)("", ch))
+            .map_or_else(
+                // The character was not accepted by any tokenizers, so it is considered
+                // invalid.
+                || Err(Error {
+                    kind: error::Kind::Invalid,
+                    class: error::Class::Char,
+                    range: ch_pos..(ch_pos + 1),
+                }),
+                // A compatible tokenizer was found.
+                |tokenizer| lex_ch_with_tokenizer(input, tokenizer, ch),
+            )
+        }
+    }
+}
+
+fn lex_ch_with_tokenizer(
+    input: &mut Peekable<impl Iterator<Item = (usize, char)>>,
+    tokenizer: &Tokenizer,
+    ch: char,
+) -> Result<(usize, Option<Token>), Error> {
+    let mut raw_token = ch.to_string();
+
+    // Continue processing characters with the selected tokenizer. Use
+    // [`Peekable::peek`] so that rejected characters may be processed again
+    // through a different tokenizer.
+    while let Some((_, ch)) = input.peek().copied() {
+        if (tokenizer.accepts)(raw_token.as_str(), ch) {
+            raw_token.push(ch);
+            // Manually advance the iterator because [`Peekable::peek`] does
+            // not.
+            let _ = input.next();
+        } else {
+            // The tokenizer rejected the new character. `current_token` is now
+            // complete.
+            break;
+        }
+    }
+
+    // Translate `raw_token` into a [`Token`].
+    Ok((raw_token.len(), (tokenizer.tokenize)(raw_token)))
 }
 
 /// A lexical token.
