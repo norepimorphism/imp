@@ -6,7 +6,10 @@ pub fn process(interp: &mut Interp, input: &str) {
         input,
         imp_backend::Callbacks {
             post_lex: |tokens| {
-                // println!("{}", tokens);
+                println!(
+                    "{}",
+                    tokens.iter().map(|span| span.to_string()).collect::<Vec<String>>().join("\n"),
+                );
             },
             post_parse: |ast| {
                 println!("{}", ast);

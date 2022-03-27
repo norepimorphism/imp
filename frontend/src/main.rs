@@ -1,6 +1,7 @@
-//! Interactive Mathematical Calculator (IMC).
+//! Interactive Mathematical Processor (IMP).
 //!
-//!
+//! This is the reference implementation of an IMP frontend. It interprets IMP expressions
+//! line-by-line in a shell-like, command-line interface.
 
 #![feature(process_exitcode_placeholder)]
 

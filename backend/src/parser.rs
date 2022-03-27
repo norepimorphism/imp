@@ -229,7 +229,7 @@ impl fmt::Display for Symbol {
 }
 
 macro_rules! impl_parse_for_newtype {
-    ($ty:tt, $field_name:tt, $field_def:expr) => {
+    ($ty:tt, $field_name:tt, $field_def:expr $(,)?) => {
         impl $ty {
             fn parse(input: &mut span::Iter<Token>) -> Result<Self, Error> {
                 let input = input.next_or(error::Class::$ty)?;
@@ -246,6 +246,11 @@ macro_rules! impl_parse_for_newtype {
     };
 }
 
-impl_parse_for_newtype!(Rational, value, value.parse().unwrap());
+impl_parse_for_newtype!(
+    Rational,
+    value,
+    // TODO: Fix hardcoded range.
+    value.parse().map_err(|_| Error::invalid(error::Class::Rational, 0..1))?,
+);
 impl_parse_for_newtype!(StrLit, content, content);
 impl_parse_for_newtype!(Symbol, name, name);
