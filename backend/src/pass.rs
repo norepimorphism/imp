@@ -1,6 +1,4 @@
-use crate::{
-    parser::{Expr, Operand, OperationId},
-};
+use crate::parser::{Expr, Operand, OperationId};
 
 pub fn resolve_pseudo_operations(expr: &mut Expr) {
     for operand in expr.operands.iter_mut() {

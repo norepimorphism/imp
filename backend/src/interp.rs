@@ -4,6 +4,7 @@ use crate::{
     error::{self, Error},
     parser::{Expr, Operand, OperationId, Symbol},
 };
+use operation::Operation;
 use std::collections::HashMap;
 
 pub struct Interp {
@@ -13,7 +14,13 @@ pub struct Interp {
 
 impl Default for Interp {
     fn default() -> Self {
-        let operations = [("add.rational", operation::ADD_RATIONAL)].map(|(name, operation)| {
+        let operations = [
+            ("add.rational", operation::ADD_RATIONAL),
+            // ("sub.ratio", operation::SUB_RATIONAL),
+            // ("mul.ratio", operation::MUL_RATIONAL),
+            // ("div.ratio", operation::DIV_RATIONAL),
+        ]
+        .map(|(name, operation)| {
             (
                 OperationId {
                     name: name.to_string(),
@@ -32,6 +39,10 @@ impl Default for Interp {
 impl Interp {
     pub fn aliases(&self) -> impl Iterator<Item = (&Symbol, &Operand)> {
         self.aliases.iter()
+    }
+
+    pub fn operations(&self) -> impl Iterator<Item = (&OperationId, &Operation)> {
+        self.operations.iter()
     }
 
     pub fn eval_expr(&mut self, mut expr: Expr) -> Result<Operand, Error> {
@@ -67,11 +78,11 @@ impl Interp {
         }
 
         // TODO: This isn't sound.
-        let execute_cnt = 1 + (actual_operand_cnt - expected_operand_cnt);
+        let extra_operand_cnt = actual_operand_cnt - expected_operand_cnt;
 
         let mut last_result = None;
 
-        for i in 0..execute_cnt {
+        for i in 0..extra_operand_cnt {
             if let Some(last_result) = last_result {
                 operands[i] = last_result;
             }
@@ -97,9 +108,4 @@ impl Interp {
 
     //     Ok(())
     // }
-}
-
-struct Operation {
-    operand_cnt: usize,
-    execute: fn(&[Operand]) -> Operand,
 }

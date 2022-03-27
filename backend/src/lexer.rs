@@ -148,6 +148,11 @@ impl fmt::Display for Token {
     }
 }
 
+struct Tokenizer {
+    accepts: fn(current: &str, new: char) -> bool,
+    tokenize: fn(it: String) -> Option<Token>,
+}
+
 /// A tokenizer that accepts rational numbers.
 const RATIONAL_TOKENIZER: Tokenizer = Tokenizer {
     accepts: |current, new| {
@@ -229,8 +234,3 @@ const COMMENT_TOKENIZER: Tokenizer = Tokenizer {
     },
     tokenize: |_| None,
 };
-
-struct Tokenizer {
-    accepts: fn(current: &str, new: char) -> bool,
-    tokenize: fn(it: String) -> Option<Token>,
-}

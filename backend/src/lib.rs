@@ -16,11 +16,7 @@ pub use span::Span;
 use lexer::Token;
 use parser::Expr;
 
-pub fn process(
-    interp: &mut Interp,
-    input: &str,
-    cb: Callbacks,
-) -> Result<parser::Operand, Error> {
+pub fn process(interp: &mut Interp, input: &str, cb: Callbacks) -> Result<parser::Operand, Error> {
     let tokens = lexer::lex(input)?;
     (cb.post_lex)(tokens.as_slice());
 

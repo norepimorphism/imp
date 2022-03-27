@@ -1,7 +1,11 @@
-use super::Operation;
 use crate::parser::{Operand, Rational};
 
-pub(super) const ADD_RATIONAL: Operation = Operation {
+pub struct Operation {
+    pub operand_cnt: usize,
+    pub execute: fn(&[Operand]) -> Operand,
+}
+
+pub const ADD_RATIONAL: Operation = Operation {
     operand_cnt: 2,
     execute: |operands| {
         if let Operand::Rational(a) = &operands[0] {
