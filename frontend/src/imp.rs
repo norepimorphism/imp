@@ -1,7 +1,23 @@
 use imp_backend::{parser::Operand, Interp};
 
 pub fn process(interp: &mut Interp, input: &str) {
-    match imp_backend::process(interp, input) {
+    let result = imp_backend::process(
+        interp,
+        input,
+        imp_backend::Callbacks {
+            post_lex: |tokens| {
+                // println!("{}", tokens);
+            },
+            post_parse: |ast| {
+                println!("{}", ast);
+            },
+            post_resolve: |ast| {
+                println!("{}", ast);
+            },
+        },
+    );
+
+    match result {
         Ok(op) => {
             print_result(op);
 

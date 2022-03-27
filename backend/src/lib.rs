@@ -13,10 +13,28 @@ pub use error::Error;
 pub use interp::Interp;
 pub use span::Span;
 
-pub fn process(interp: &mut Interp, input: &str) -> Result<parser::Operand, Error> {
+use lexer::Token;
+use parser::Expr;
+
+pub fn process(
+    interp: &mut Interp,
+    input: &str,
+    cb: Callbacks,
+) -> Result<parser::Operand, Error> {
     let tokens = lexer::lex(input)?;
+    (cb.post_lex)(tokens.as_slice());
+
     let mut ast = parser::parse(tokens.into_iter())?;
-    pass::prep(&mut ast);
+    (cb.post_parse)(&ast);
+
+    pass::resolve_pseudo_operations(&mut ast);
+    (cb.post_resolve)(&ast);
 
     interp.eval_expr(ast)
+}
+
+pub struct Callbacks {
+    pub post_lex: fn(&[Span<Token>]),
+    pub post_parse: fn(&Expr),
+    pub post_resolve: fn(&Expr),
 }
