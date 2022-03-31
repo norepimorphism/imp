@@ -1,8 +1,11 @@
+use imp_backend::e::Interp;
+
+/// Determines if user input is a shell command.
 pub fn is_cmd(it: &str) -> bool {
     it.starts_with(':')
 }
 
-pub fn process<'a>(interp: &imp_backend::Interp, cmd: &'a str) {
+pub fn process<'a>(interp: &Interp, cmd: &'a str) {
     let (name, _) = split(cmd);
     match name {
         "h" | "help" => {
@@ -42,15 +45,8 @@ fn print_usage() {
     println!("  :v, :print-version      Prints the version number.");
 }
 
-fn print_interp_aliases(interp: &imp_backend::Interp) {
-    println!(
-        "{}",
-        interp
-            .aliases()
-            .map(|(symbol, operand)| format!("{} -> {}", symbol, operand))
-            .collect::<Vec<String>>()
-            .join("\n")
-    );
+fn print_interp_aliases(interp: &Interp) {
+    todo!()
 }
 
 fn print_version() {

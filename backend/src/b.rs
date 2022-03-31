@@ -1,0 +1,96 @@
+use crate::{a, span::Span};
+use std::fmt;
+
+pub fn process(mut input: a::Output) -> Output {
+    enclose_in_parens(&mut input.tokens);
+
+    Output {
+        tokens: resolve_operators(input.tokens),
+    }
+}
+
+fn enclose_in_parens(tokens: &mut Vec<Span<a::Token>>) {
+    if !matches!(tokens.first(), Some(Span { inner: a::Token::LParen, range: _ })) {
+        // TODO: Fix span.
+        tokens.insert(0, Span::new(a::Token::LParen, 0..1));
+        tokens.push(Span::new(a::Token::RParen, 0..1));
+    }
+}
+
+fn resolve_operators(tokens: Vec<Span<a::Token>>) -> Vec<Span<Token>> {
+    tokens
+        .into_iter()
+        .map(|token| {
+            token.map(|token| {
+                match token {
+                    a::Token::LParen => Token::LParen,
+                    a::Token::RParen => Token::RParen,
+                    a::Token::LBrace => Token::LBrace,
+                    a::Token::RBrace => Token::RBrace,
+                    a::Token::Plus => Token::Symbol("\\plus".to_string()),
+                    a::Token::Minus => Token::Symbol("\\minus".to_string()),
+                    a::Token::Star => Token::Symbol("\\times".to_string()),
+                    a::Token::Slash => Token::Symbol("\\div".to_string()),
+                    a::Token::Dollar => Token::Dollar,
+                    a::Token::Hash => Token::Hash,
+                    a::Token::Rational(it) => Token::Rational(it),
+                    a::Token::StrLit(it) => Token::StrLit(it),
+                    a::Token::Symbol(it) => Token::Symbol(it),
+                }
+            })
+        })
+        .collect()
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Token {
+    /// A left, or opening, parenthesis (`(`).
+    LParen,
+    /// A right, or closing, parenthesis (`)`).
+    RParen,
+    /// A left, or opening, brace (`{`).
+    LBrace,
+    /// A right, or closing, brace (`}`).
+    RBrace,
+    /// A dollar sign (`$`).
+    Dollar,
+    /// A hash sign (`#`).
+    Hash,
+    /// A rational number.
+    Rational(String),
+    /// A string literal.
+    StrLit(String),
+    /// A symbol.
+    Symbol(String),
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let it = match self {
+            Self::LParen => '('.to_string(),
+            Self::RParen => ')'.to_string(),
+            Self::LBrace => '{'.to_string(),
+            Self::RBrace => '}'.to_string(),
+            Self::Dollar => '$'.to_string(),
+            Self::Hash => '#'.to_string(),
+            Self::Rational(it) => it.to_string(),
+            Self::StrLit(it) => it.to_string(),
+            Self::Symbol(it) => format!("\\{}", it),
+        };
+
+        write!(
+            f,
+            "{0}{1}{0}",
+            match it.len() {
+                1 => '\'',
+                _ => '"',
+            },
+            it
+        )
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct Output {
+    pub tokens: Vec<Span<Token>>,
+}

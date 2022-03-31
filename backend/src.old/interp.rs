@@ -1,11 +1,8 @@
 mod operation;
 
-use crate::{
-    error::{self, Error},
-    parser::{Expr, Operand, OperationId, Symbol},
-};
+use crate::{error::Span, parser::{Expr, Operand, OperationId, Symbol}};
 use operation::Operation;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 pub struct Interp {
     aliases: HashMap<Symbol, Operand>,
@@ -15,12 +12,12 @@ pub struct Interp {
 impl Default for Interp {
     fn default() -> Self {
         let operations = [
-            ("add.rational", operation::ADD_RATIONAL),
+            // ("add.rational", operation::ADD_RATIONAL),
             // ("sub.ratio", operation::SUB_RATIONAL),
             // ("mul.ratio", operation::MUL_RATIONAL),
             // ("div.ratio", operation::DIV_RATIONAL),
         ]
-        .map(|(name, operation)| {
+        .map(|(name, operation): (&str, Operation)| {
             (
                 OperationId {
                     name: name.to_string(),
@@ -45,14 +42,14 @@ impl Interp {
         self.operations.iter()
     }
 
-    pub fn eval_expr(&mut self, mut expr: Expr) -> Result<Operand, Error> {
+    pub fn eval_expr(&mut self, mut expr: Expr) -> Result<Operand, Span<Error>> {
         self.subst_aliases(&mut expr.operands);
 
         if let Some(operation) = self.operations.get(&expr.operation_id) {
             Self::eval_operation_with_operands(operation, expr.operands)
         } else {
             // TODO: Replace range with actual span range.
-            Err(Error::invalid(error::Class::OperationId, 0..1))
+            todo!()
         }
     }
 
@@ -108,4 +105,15 @@ impl Interp {
 
     //     Ok(())
     // }
+}
+
+#[derive(Debug)]
+pub struct Error {}
+
+impl std::error::Error for Error {}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        todo!()
+    }
 }

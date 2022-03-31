@@ -1,54 +1,56 @@
-//! A unified error interface.
+use crate::b::Token;
+use std::fmt;
 
-use crate::lexer::Token;
-use std::{fmt, ops::Range};
-
-/// An error.
-#[derive(Debug)]
+/// A parser error.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Error {
-    /// The kind.
-    pub kind: Kind,
-    /// The class causing the error.
-    pub class: Class,
-    pub range: Range<usize>,
+    /// The cause of the error.
+    cause: Cause,
+    subject: Subject,
 }
 
 impl std::error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.kind, self.class)
+        write!(f, "{} {}", self.cause, self.subject)
     }
 }
 
 impl Error {
-    pub fn expected(class: Class, range: Range<usize>) -> Self {
+    pub fn expected(subject: Subject) -> Self {
         Self {
-            kind: Kind::Expected,
-            class,
-            range,
+            cause: Cause::Expected,
+            subject,
         }
     }
 
-    pub fn invalid(class: Class, range: Range<usize>) -> Self {
+    pub fn invalid(subject: Subject) -> Self {
         Self {
-            kind: Kind::Invalid,
-            class,
-            range,
+            cause: Cause::Invalid,
+            subject,
         }
+    }
+
+    pub fn cause(&self) -> Cause {
+        self.cause
+    }
+
+    pub fn subject(&self) -> &Subject {
+         &self.subject
     }
 }
 
-/// A kind of [error](Error).
-#[derive(Debug)]
-pub enum Kind {
+/// The cause of an [error](Error).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Cause {
     /// Something expected is missing.
     Expected,
     /// Something is not valid.
     Invalid,
 }
 
-impl fmt::Display for Kind {
+impl fmt::Display for Cause {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Expected => {
@@ -61,35 +63,25 @@ impl fmt::Display for Kind {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum Class {
-    /// A textual character.
-    Char,
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Subject {
     /// An [expression](crate::parser::Expr).
     Expr,
     /// An [operand](crate::parser::Operand).
     Operand,
-    /// An [operation ID](crate::parser::OperationId).
-    OperationId,
-    /// A [rational number](crate::parser::Rational)
-    Rational,
-    /// A [string literal](crate::parser::StrLit).
-    StrLit,
+    Operation,
     /// A [symbol](crate::parser::Symbol).
     Symbol,
     /// A [lexical token](crate::lexer::Token).
     Token(Option<Token>),
 }
 
-impl fmt::Display for Class {
+impl fmt::Display for Subject {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Char => write!(f, "character"),
             Self::Expr => write!(f, "expression"),
             Self::Operand => write!(f, "operand"),
-            Self::OperationId => write!(f, "operation"),
-            Self::Rational => write!(f, "rational number"),
-            Self::StrLit => write!(f, "string literal"),
+            Self::Operation => write!(f, "operation"),
             Self::Symbol => write!(f, "symbol"),
             Self::Token(maybe) => {
                 write!(f, "token")?;

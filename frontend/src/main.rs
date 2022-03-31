@@ -1,32 +1,47 @@
 //! Interactive Mathematical Processor (IMP).
 //!
-//! This is the reference implementation of an IMP frontend. It interprets IMP expressions
-//! line-by-line in a shell-like, command-line interface.
+//! This is the reference implementation of an [IMP] frontend. It interprets IMP expressions
+//! line-by-line in a shell-like, command-line interface. IMP is stateless; however, configuration
+//! is possible through a TOML configuration file.
+//!
+//! By default, output is colored with ANSI color codes if IMP determines that the containing
+//! terminal supports them (see the [supports-color] crate). Interpreter errors are visualized with
+//! a red error message and cyan span markers (`^`) pointing to the area of concern from the
+//! previous line.
+//!
+//! Colored output may be disabled by defining a `NO_COLOR` environment variable or disabling color
+//! in the configuration file. The color of the shell prompt and error messages is customizable
+//! through the configuration file.
+//!
+//! [IMP]: https://crates.io/crates/imp-backend
+//! [supports-color]: https://crates.io/crates/supports-color
 
 #![feature(process_exitcode_placeholder)]
 
 mod cmd;
 mod imp;
 
+use imp_backend::e::Interp;
 use std::{
     io::{self, Write as _},
     process::ExitCode,
 };
 
 fn main() -> ExitCode {
-    main_impl();
-
-    ExitCode::SUCCESS
-}
-
-fn main_impl() {
-    let mut interp = imp_backend::Interp::default();
+    // This interpreter lives for the entire duration of the program. It is continually accessed and
+    // mutated by [shell commands](cmd::process) and [IMPL expressions](imp::process).
+    let mut interp = Interp::default();
     loop {
         do_shell(&mut interp);
     }
+
+    // Note: don't bother removing this line; it is likely that an error within this scope will be
+    // possible at some point.
+    ExitCode::SUCCESS
 }
 
-fn do_shell(interp: &mut imp_backend::Interp) {
+/// Prints the shell prompt, reads user input, and executes the appropriate processor function.
+fn do_shell(interp: &mut Interp) {
     print_shell_prompt();
     let user_input = read_user_input();
 

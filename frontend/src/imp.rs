@@ -1,30 +1,24 @@
-use imp_backend::{parser::Operand, Interp};
+use imp_backend::{e::Interp};
 
 pub fn process(interp: &mut Interp, input: &str) {
     let result = imp_backend::process(
-        interp,
         input,
         imp_backend::Callbacks {
-            post_lex: |tokens| {
-                println!(
-                    "{}",
-                    tokens.iter().map(|span| span.to_string()).collect::<Vec<String>>().join("\n"),
-                );
-            },
-            post_parse: |ast| {
-                println!("{}", ast);
-            },
-            post_resolve: |ast| {
-                println!("{}", ast);
-            },
+            a: Some(|out| {
+                println!("{:#?}", out);
+            }),
+            b: Some(|out| {
+                println!("{:#?}", out);
+            }),
+            c: Some(|out| {
+                println!("{:#?}", out);
+            }),
         },
     );
 
     match result {
         Ok(op) => {
-            print_result(op);
-
-            // demo_plot();
+            // print_result(op);
         }
         Err(e) => {
             print_span(&e.range);
@@ -33,62 +27,22 @@ pub fn process(interp: &mut Interp, input: &str) {
     }
 }
 
-fn print_result(op: Operand) {
-    println!(
-        "  {} {}",
-        crate::color(
-            supports_color::Stream::Stdout,
-            "=".to_string(),
-            ansi_term::Style::new().bold().fg(ansi_term::Color::Yellow)
-        ),
-        op,
-    );
-}
-
-// fn demo_plot() {
-//     use plotters::prelude::*;
-
-//     let mut svg = String::new();
-//     let root = plotters_svg::SVGBackend::with_string(&mut svg, (640, 480)).into_drawing_area();
-
-//     let mut chart = ChartBuilder::on(&root)
-//         .caption("y=x^2", ("sans-serif", 50).into_font())
-//         .build_cartesian_2d(-1f32..1f32, -0.1f32..1f32)
-//         .unwrap();
-
-//     chart.configure_mesh().draw().unwrap();
-
-//     chart
-//         .draw_series(LineSeries::new(
-//             (-50..=50).map(|x| x as f32 / 50.0).map(|x| (x, x * x)),
-//             &RED,
-//         ))
-//         .unwrap()
-//         .label("y = x^2")
-//         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
-
-//     chart
-//         .configure_series_labels()
-//         .background_style(&WHITE.mix(0.8))
-//         .border_style(&BLACK)
-//         .draw()
-//         .unwrap();
-
-//     drop(chart);
-//     drop(root);
-
-//     let img = nsvg::parse_str(svg.as_str(), nsvg::Units::Pixel, 96.0)
-//         .unwrap()
-//         .rasterize(1.0)
-//         .unwrap();
-
-//     let img = image::load_from_memory_with_format(&img, image::ImageFormat::Bmp).unwrap();
-
-//     viuer::print(&img, &viuer::Config::default()).unwrap();
+// fn print_result(op: Operand) {
+//     println!(
+//         "  {} {}",
+//         crate::color(
+//             supports_color::Stream::Stdout,
+//             "=".to_string(),
+//             ansi_term::Style::new().bold().fg(ansi_term::Color::Yellow)
+//         ),
+//         op,
+//     );
 // }
 
 fn print_span(range: &std::ops::Range<usize>) {
     // Match the shell prompt (` >`).
+    // TODO: automatically update this value based on the shell prompt; doing so establishes, e.g.,
+    // the [`print_shell_prompt`] function, as the single source of truth.
     eprint!("  ");
     // Print leading whitespace.
     eprint!("{0:<1$}", "", range.start);
