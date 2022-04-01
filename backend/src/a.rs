@@ -1,9 +1,9 @@
 //! The IMPL lexer.
 //!
 //! The lexer translates IMPL code into lexical tokens. As this is the only component with access to
-//! the original IMPL code, the lexer is responsible for preserving links between tokens and
-//! the source code so that erroneous code snippets may be identified and presented to the user.
-//! Specifically, these links are implemented as [`Span`]s.
+//! the original IMPL code, the lexer is responsible for preserving links---implemented as [`Span`]s
+//! ---between tokens and the source code so that erroneous code snippets may be identified and
+//! presented to the user.
 
 mod tkz;
 
@@ -13,7 +13,7 @@ use tkz::Tokenizer;
 
 /// Translates one or more lines of IMPL code into [a sequence of lexical tokens](Output).
 pub fn process(impl_code: &str) -> Result<Output, Span<Error>> {
-    // Create a peekable iterator of character and index pairs.
+    // A peekable iterator of character and index pairs.
     let mut idxed_chars = break_into_chars(impl_code);
     let mut output = Output::default();
 
@@ -22,7 +22,7 @@ pub fn process(impl_code: &str) -> Result<Output, Span<Error>> {
         // Try to create a lexical token given the first character of the token's source code.
         let token = tokenize(&mut idxed_chars, first.val)
             .map(|tkzed| {
-                // The token was successfully... well, tokenized.
+                // Success!
 
                 tkzed.maybe_token.map(|token| {
                     // Include this token in the final sequence.
@@ -30,9 +30,8 @@ pub fn process(impl_code: &str) -> Result<Output, Span<Error>> {
                 })
             })
             .map_err(|e| {
-                // Tokenization failed; this only occurs when the first character is
-                // incompatible with all tokenizers. The error range is therefore the first
-                // character.
+                // Tokenization failed; this only occurs when the first character is incompatible
+                // with all tokenizers. The error range is therefore the first character.
                 Span::new(e, (first.idx)..(first.idx + 1))
             })?;
 
@@ -63,7 +62,7 @@ fn tokenize(
     first_ch: char,
 ) -> Result<Tokenized, Error> {
     // There are two flavors of tokenizers: multi- and single-character. Multi-character tokenizers
-    // form a token from multiple characters, while single-character tokenizers require only one
+    // form a token from multiple characters, whereas single-character tokenizers require only one
     // character.
 
     // The multi-character tokenizers will be attempted first with the single-character tokenizer
@@ -227,7 +226,11 @@ pub enum Error {
 impl std::error::Error for Error {}
 
 impl fmt::Display for Error {
-    fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TokenizerNotFound { first_ch } => {
+                write!(f, "a compatible tokenizer was not found given the first character '{}'", first_ch)
+            }
+        }
     }
 }

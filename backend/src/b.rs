@@ -9,11 +9,27 @@ pub fn process(mut input: a::Output) -> Output {
     }
 }
 
+/// Encloses a token sequence in [`Token::LParen`] and [`Token::RParen`].
+///
+/// Although the IMPL grammar permits omitting outer parentheses, the parser is designed to only
+/// recognize expressions which are enclosed in parentheses. Here, we add these parentheses if they
+/// were omitted.
 fn enclose_in_parens(tokens: &mut Vec<Span<a::Token>>) {
     if !matches!(tokens.first(), Some(Span { inner: a::Token::LParen, range: _ })) {
-        // TODO: Fix span.
-        tokens.insert(0, Span::new(a::Token::LParen, 0..1));
-        tokens.push(Span::new(a::Token::RParen, 0..1));
+        // An outer left parenthesis wasn't found.
+
+        // The length of this span is 0 so that it will never be shown in an error; this is
+        // important because the user never actually typed this parenthesis, so such a span would
+        // highlight the wrong character.
+        tokens.insert(0, Span::new(a::Token::LParen, 0..0));
+
+        let end = tokens
+            .last()
+            // This `expect` is OK because we know that `tokens` isn't empty; `tokens.first()`
+            // matched with a `Some(_)` pattern, after all.
+            .expect("`tokens` should not be empty")
+            .range.end;
+        tokens.push(Span::new(a::Token::RParen, end..end));
     }
 }
 
@@ -27,10 +43,10 @@ fn resolve_operators(tokens: Vec<Span<a::Token>>) -> Vec<Span<Token>> {
                     a::Token::RParen => Token::RParen,
                     a::Token::LBrace => Token::LBrace,
                     a::Token::RBrace => Token::RBrace,
-                    a::Token::Plus => Token::Symbol("\\plus".to_string()),
-                    a::Token::Minus => Token::Symbol("\\minus".to_string()),
-                    a::Token::Star => Token::Symbol("\\times".to_string()),
-                    a::Token::Slash => Token::Symbol("\\div".to_string()),
+                    a::Token::Plus => Token::Symbol("plus".to_string()),
+                    a::Token::Minus => Token::Symbol("minus".to_string()),
+                    a::Token::Star => Token::Symbol("times".to_string()),
+                    a::Token::Slash => Token::Symbol("div".to_string()),
                     a::Token::Dollar => Token::Dollar,
                     a::Token::Hash => Token::Hash,
                     a::Token::Rational(it) => Token::Rational(it),
@@ -64,6 +80,7 @@ pub enum Token {
     Symbol(String),
 }
 
+// TODO: This was copy-and-pasted from Module A.
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let it = match self {

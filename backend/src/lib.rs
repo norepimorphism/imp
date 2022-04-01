@@ -67,29 +67,33 @@ pub struct Callbacks {
     pub a: Option<fn(&a::Output)>,
     pub b: Option<fn(&b::Output)>,
     pub c: Option<fn(&c::Output)>,
+    pub d: Option<fn(&d::Output)>,
 }
 
-pub fn process(impl_code: &str, cb: Callbacks) -> Result<c::Output, Span<Error>> {
+pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<e::Output>, Span<Error>> {
     let output = a::process(impl_code).map_err(|e| e.map(Error::A))?;
-    if let Some(f) = cb.a {
-        f(&output);
+    if let Some(a) = cb.a {
+        a(&output);
     }
 
     let output = b::process(output);
-    if let Some(f) = cb.b {
-        f(&output);
+    if let Some(b) = cb.b {
+        b(&output);
     }
 
-    let output = c::process(output).map_err(|e| e.map(Error::C))?;
-    if let Some(f) = cb.c {
-        f(&output);
+    let mut output = c::process(output).map_err(|e| e.map(Error::C))?;
+    if let Some(c) = cb.c {
+        c(&output);
     }
 
-    // TODO
-    // d::process(&mut output);
-    //e::process(output).map_err(Error::E)
+    d::process(&mut output);
+    if let Some(d) = cb.d {
+        d(&output);
+    }
 
-    Ok(output)
+    // TODO: e::process(interp, output).map_err(Error::E)
+
+    Ok(vec![e::Output::Text("TODO".to_string())])
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -117,6 +121,6 @@ impl std::error::Error for Span<Error> {}
 
 impl fmt::Display for Span<Error> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}-{}: {}", self.range.start, self.range.end, self.inner)
+        self.inner.fmt(f)
     }
 }

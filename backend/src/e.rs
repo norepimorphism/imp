@@ -1,14 +1,25 @@
-use std::fmt;
+//! The IMPL interpreter.
 
-pub fn process() -> () {
+use crate::c::{Expr, Operand};
+use std::{collections::HashMap, fmt};
 
+pub fn process(interp: &mut Interp, expr: Expr) -> Result<Output, Error> {
+    interp.eval_expr(expr)
 }
 
 #[derive(Default)]
-pub struct Interp;
+pub struct Interp {
+    aliases: HashMap<String, Operand>,
+}
+
+impl Interp {
+    fn eval_expr(&self, expr: Expr) -> Result<Output, Error> {
+        todo!()
+    }
+}
 
 pub enum Output {
-    Text,
+    Text(String),
     Graphic,
 }
 

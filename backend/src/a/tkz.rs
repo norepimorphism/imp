@@ -21,20 +21,11 @@ pub const COMMENT: Tokenizer = Tokenizer {
 
 /// A tokenizer that accepts rational numbers.
 pub const RATIONAL: Tokenizer = Tokenizer {
-    accepts: |current, next| {
-        if current.is_empty() && ((next == '+') || (next == '-')) {
-            // A rational number may be prefixed by a plus or minus.
-            return true;
-        }
-
+    accepts: |_, next| {
+        // A rational number may include a digit or decimal point in any location, including the
+        // first and last character.
         // TODO: Make decimal point configurable to a comma.
-        if next.is_ascii_digit() || (next == '.') {
-            // A rational number may also include a digit or decimal point in any location,
-            // including the first and last character.
-            return true;
-        }
-
-        false
+        next.is_ascii_digit() || (next == '.')
     },
     tokenize: |raw| Some(Token::Rational(raw)),
 };

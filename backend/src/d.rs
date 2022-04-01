@@ -1,4 +1,10 @@
+pub use crate::c::{self, Output};
+
 use std::fmt;
+
+pub fn process(_: &mut c::Output) {
+
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {}

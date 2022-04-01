@@ -1,3 +1,5 @@
+//! The IMPL parser.
+
 mod err;
 mod tokens;
 
@@ -31,10 +33,12 @@ impl Expr {
             |token| token.inner == Token::LParen,
         )?;
 
-        let operation = Self::parse_operation(tokens)?;
+        let operation = Operation::parse(tokens)?;
 
-        // TODO
-        let operands = vec![Self::parse_operand(tokens)?];
+        let mut operands = Vec::new();
+        while let Some(operand) = Operand::parse(tokens)? {
+            operands.push(operand);
+        }
 
         let r_paren = tokens.expect(
             err::Subject::Token(Some(Token::RParen)),
@@ -46,17 +50,6 @@ impl Expr {
             (l_paren.range.start)..(r_paren.range.end),
         ))
     }
-
-    fn parse_operation(tokens: &mut Tokens) -> Result<Span<Operation>, Span<Error>> {
-        let Some(Span {
-            inner: Token::Symbol(name),
-            range,
-        }) = tokens.next() else {
-            return Err(tokens.fail(Error::expected(err::Subject::Operation)));
-        };
-
-        Ok(Span::new(Operation { name: name.to_string() }, range))
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -64,20 +57,16 @@ pub struct Operation {
     pub name: String,
 }
 
-impl Expr {
-    fn parse_operand(tokens: &mut Tokens) -> Result<Span<Operand>, Span<Error>> {
-        let determinant = tokens
-            .peek()
-            .ok_or_else(|| tokens.fail(Error::expected(err::Subject::Operand)))?;
+impl Operation {
+    fn parse(tokens: &mut Tokens) -> Result<Span<Self>, Span<Error>> {
+        let Some(Span {
+            inner: Token::Symbol(name),
+            range,
+        }) = tokens.next() else {
+            return Err(tokens.fail(Error::expected(err::Subject::Operation)));
+        };
 
-        match determinant.inner {
-            Token::LParen => Expr::parse(tokens).map(|expr| expr.map(Operand::Expr)),
-            // TODO
-            // Token::Rational(it),
-            // Token::StrLit(it),
-            // Token::StrLit(it),
-            _ => Err(tokens.fail(Error::expected(err::Subject::Operand))),
-        }
+        Ok(Span::new(Self { name: name.to_string() }, range))
     }
 }
 
@@ -89,9 +78,42 @@ pub enum Operand {
     Symbol(Symbol),
 }
 
+impl Operand {
+    fn parse(tokens: &mut Tokens) -> Result<Option<Span<Operand>>, Span<Error>> {
+        let determinant = tokens
+            .peek()
+            .ok_or_else(|| tokens.fail(Error::expected(err::Subject::Operand)))?;
+
+        match determinant.inner {
+            Token::LParen => {
+                Expr::parse(tokens)
+                    .map(|expr| expr.map(Self::Expr))
+                    .map(Some)
+            }
+            Token::Rational(val) => {
+                tokens.advance();
+                let val = val.parse::<f64>()
+                    .map_err(|_| Span::new(Error::invalid(err::Subject::Operand), determinant.range.clone()))?;
+
+                Ok(Some(Span::new(Operand::Rational(Rational { val }), determinant.range)))
+            }
+            Token::StrLit(content) => {
+                tokens.advance();
+                Ok(Some(Span::new(Operand::StrLit(StrLit { content }), determinant.range)))
+            }
+            Token::Symbol(name) => {
+                tokens.advance();
+                Ok(Some(Span::new(Operand::Symbol(Symbol { name }), determinant.range)))
+            }
+            Token::RParen => Ok(None),
+            _ => Err(tokens.fail(Error::expected(err::Subject::Operand))),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Rational {
-    pub value: f64,
+    pub val: f64,
 }
 
 #[derive(Clone, Debug)]
