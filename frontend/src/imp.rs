@@ -26,8 +26,19 @@ pub fn process(_: &mut Interp, input: &str) {
             }
         }
         Err(e) => {
+            use crate::Stage;
+            use imp_backend::Error;
+
             print_span(&e.range);
-            crate::print_error(e);
+
+            let stage = match e.inner {
+                Error::A(_) => Stage::A,
+                Error::C(_) => Stage::C,
+                Error::D(_) => Stage::D,
+                Error::E(_) => Stage::E,
+            };
+
+            crate::print_error(stage, e);
         }
     }
 }

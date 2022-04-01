@@ -23,6 +23,7 @@ mod imp;
 
 use imp_backend::e::Interp;
 use std::{
+    fmt,
     io::{self, Write as _},
     process::ExitCode,
 };
@@ -72,15 +73,36 @@ fn read_user_input() -> String {
     input
 }
 
+enum Stage {
+    A,
+    B,
+    C,
+    D,
+    E,
+}
+
+impl fmt::Display for Stage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", match self {
+            Self::A => 'a',
+            Self::B => 'b',
+            Self::C => 'c',
+            Self::D => 'd',
+            Self::E => 'e',
+        })
+    }
+}
+
 // Prints an error message.
-fn print_error(e: impl std::error::Error) {
+fn print_error(stage: Stage, e: impl std::error::Error) {
     eprintln!(
-        "{}: {}",
+        "{}[{}]: {}",
         color(
             supports_color::Stream::Stderr,
             "error".to_string(),
             ansi_term::Style::new().bold().fg(ansi_term::Color::Red),
         ),
+        stage,
         e,
     );
 }
