@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ahash = "0.7"
+static_init = "1.0"
 termtree = "0.2"

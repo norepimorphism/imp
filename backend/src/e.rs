@@ -1,10 +1,13 @@
 //! The IMPL interpreter.
 
-use crate::c::{Expr, Operand};
+mod opn;
+
+use crate::c::{self, Expr};
+use opn::{OPERATIONS, Operand, Operation};
 use std::{collections::HashMap, fmt};
 
 pub fn process(interp: &mut Interp, expr: Expr) -> Result<Output, Error> {
-    interp.eval_expr(expr)
+    Ok(Output::Text(interp.eval_expr(expr).unwrap().to_string()))
 }
 
 #[derive(Default)]
@@ -13,8 +16,21 @@ pub struct Interp {
 }
 
 impl Interp {
-    fn eval_expr(&self, expr: Expr) -> Result<Output, Error> {
-        todo!()
+    fn eval_expr(&self, expr: Expr) -> Result<Operand, opn::Error> {
+        let operation = OPERATIONS.get(&expr.operation.inner.name).unwrap();
+        let operands = expr.operands
+            .into_iter()
+            .map(|operand| {
+                match operand.inner {
+                    c::Operand::Expr(expr) => self.eval_expr(expr).unwrap(),
+                    c::Operand::Rational(it) => Operand::Rational(it),
+                    c::Operand::StrLit(it) => Operand::StrLit(it),
+                    c::Operand::Symbol(it) => Operand::Symbol(it),
+                }
+            })
+            .collect::<Vec<Operand>>();
+
+        (operation.exe)(operands.as_slice())
     }
 }
 

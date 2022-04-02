@@ -1,7 +1,8 @@
 use imp_backend::{e::Interp};
 
-pub fn process(_: &mut Interp, input: &str) {
+pub fn process(interp: &mut Interp, input: &str) {
     let result = imp_backend::process(
+        interp,
         input,
         imp_backend::Callbacks {
             a: Some(|out| {

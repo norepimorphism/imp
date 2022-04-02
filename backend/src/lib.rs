@@ -70,7 +70,11 @@ pub struct Callbacks {
     pub d: Option<fn(&d::Output)>,
 }
 
-pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<e::Output>, Span<Error>> {
+pub fn process(
+    interp: &mut e::Interp,
+    impl_code: &str,
+    cb: Callbacks,
+) -> Result<Vec<e::Output>, Span<Error>> {
     let output = a::process(impl_code).map_err(|e| e.map(Error::A))?;
     if let Some(a) = cb.a {
         a(&output);
@@ -91,9 +95,7 @@ pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<e::Output>, Span<Er
         d(&output);
     }
 
-    // TODO: e::process(interp, output).map_err(Error::E)
-
-    Ok(vec![e::Output::Text("TODO".to_string())])
+    Ok(output.ast.into_iter().map(|expr| e::process(interp, expr.inner).unwrap()).collect())
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
