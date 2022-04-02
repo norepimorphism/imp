@@ -83,7 +83,7 @@ fn tokenize(
         .map(Ok)
         .unwrap_or_else(|| {
             // Neither a compatible multi- nor single-character tokenizer was found.
-            Err(Error::TokenizerNotFound { first_ch })
+            Err(Error::Invalid(first_ch ))
         })
 }
 
@@ -220,7 +220,7 @@ pub struct Output {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
-    TokenizerNotFound { first_ch: char }
+    Invalid(char),
 }
 
 impl std::error::Error for Error {}
@@ -228,8 +228,8 @@ impl std::error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::TokenizerNotFound { first_ch } => {
-                write!(f, "a compatible tokenizer was not found given the first character '{}'", first_ch)
+            Self::Invalid(ch) => {
+                write!(f, "invalid character '{}'", ch)
             }
         }
     }
