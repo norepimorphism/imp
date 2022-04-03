@@ -1,13 +1,54 @@
-pub use crate::c::{self, Output};
+//! The IMPL interpreter.
 
+mod operand;
+mod operation;
+
+use crate::c::Expr;
+use operand::Operand;
+use operation::OPERATIONS;
 use std::fmt;
 
-pub fn process(_: &mut c::Output) {
+pub fn process(expr: Expr) -> Result<Output, Error> {
+    Ok(Output::Text(eval_expr(expr).unwrap().to_string()))
+}
 
+fn eval_expr(expr: Expr) -> Result<Operand, Error> {
+    let operation = OPERATIONS
+        .get(&expr.operation.inner.name.as_str())
+        .ok_or_else(|| Error::UnknownOperation { name: expr.operation.inner.name.clone() })?;
+
+    let operands = expr.operands
+        .into_iter()
+        // Recursively evaluate subexpressions (see [`Operand::from`]).
+        .map(|operand| operand.map(Operand::from))
+        .enumerate()
+        .map(|(idx, operand)| {
+            let expected_type = operation.sig[idx];
+
+            if !operand.inner.is_type_valid(expected_type) {
+                return Err(Error::UnexpectedType);
+            }
+
+            Ok(operand::Raw::new(operand.inner))
+        })
+        .collect::<Result<Vec<operand::Raw>, Error>>()?;
+
+    // Execute the operation with its operands.
+    (operation.exe)(operands.as_slice()).map_err(Error::Operation)
+}
+
+pub enum Output {
+    Text(String),
+    Graphic,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Error {}
+pub enum Error {
+    InvalidType,
+    Operation(operation::Error),
+    UnexpectedType,
+    UnknownOperation { name: String },
+}
 
 impl std::error::Error for Error {}
 

@@ -1,12 +1,11 @@
-use crate::c::Rational;
-use super::{expect_operand, Error, Operand, Operation};
+use crate::{c::Rational, d::{operand::{self, Operand}, operation::Operation}};
 
 macro_rules! bi_rat {
     ($name:ident, $op:tt) => {
         pub const $name: Operation = Operation {
+            sig: &[operand::Kind::Rational, operand::Kind::Rational],
             exe: |ops| {
-                expect_operand!(Operand::Rational(a), ops, 0);
-                expect_operand!(Operand::Rational(b), ops, 1);
+                let (a, b) = unsafe { (&ops[0].rational, &ops[1].rational) };
 
                 Ok(Operand::Rational(Rational { val: a.val $op b.val }))
             },
