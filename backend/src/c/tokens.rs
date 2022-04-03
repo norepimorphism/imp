@@ -33,6 +33,10 @@ impl Tokens {
         }
     }
 
+    pub fn expected(&self, subject: err::Subject) -> Span<Error> {
+        self.fail(Error::expected(subject))
+    }
+
     pub fn fail(&self, e: Error) -> Span<Error> {
         Span::new(e, self.peek_next_span_range())
     }

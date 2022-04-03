@@ -20,7 +20,7 @@ pub fn process(input: b::Output) -> Result<Output, Span<Error>> {
 }
 
 /// An S-expression.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Expr {
     pub operation: Span<Operation>,
     pub operands: Vec<Span<Operand>>,
@@ -70,7 +70,7 @@ impl Operation {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum Operand {
     Expr(Expr),
     Rational(Rational),
@@ -82,38 +82,34 @@ impl Operand {
     fn parse(tokens: &mut Tokens) -> Result<Option<Span<Operand>>, Span<Error>> {
         let determinant = tokens
             .peek()
-            .ok_or_else(|| tokens.fail(Error::expected(err::Subject::Operand)))?;
+            .ok_or_else(|| tokens.expected(err::Subject::Operand))?;
+
+        if let Token::LParen = determinant.inner {
+            return Expr::parse(tokens)
+                .map(|expr| expr.map(Self::Expr))
+                .map(Some);
+        }
+
+        if let Token::RParen = determinant.inner {
+            return Ok(None);
+        }
+
+        tokens.advance();
 
         match determinant.inner {
-            Token::LParen => {
-                Expr::parse(tokens)
-                    .map(|expr| expr.map(Self::Expr))
-                    .map(Some)
-            }
-            Token::Rational(val) => {
-                tokens.advance();
-                let val = val.parse::<f64>()
-                    .map_err(|_| Span::new(Error::invalid(err::Subject::Operand), determinant.range.clone()))?;
-
-                Ok(Some(Span::new(Operand::Rational(Rational { val }), determinant.range)))
-            }
-            Token::StrLit(content) => {
-                tokens.advance();
-                Ok(Some(Span::new(Operand::StrLit(StrLit { content }), determinant.range)))
-            }
-            Token::Symbol(name) => {
-                tokens.advance();
-                Ok(Some(Span::new(Operand::Symbol(Symbol { name }), determinant.range)))
-            }
-            Token::RParen => Ok(None),
-            _ => Err(tokens.fail(Error::expected(err::Subject::Operand))),
+            Token::Rational(val) => Ok(Operand::Rational(Rational { val })),
+            Token::StrLit(content) => Ok(Operand::StrLit(StrLit { content })),
+            Token::Symbol(name) => Ok(Operand::Symbol(Symbol { name })),
+            _ => Err(Error::expected(err::Subject::Operand)),
         }
+        .map(|it| Some(Span::new(it, determinant.range.clone())))
+        .map_err(|e| Span::new(e, determinant.range))
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Rational {
-    pub val: f64,
+    pub val: String,
 }
 
 #[derive(Clone, Debug)]
