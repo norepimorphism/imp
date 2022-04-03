@@ -6,6 +6,7 @@ mod tokens;
 pub use err::Error;
 
 use crate::{b::{self, Token}, span::Span};
+use std::fmt;
 use tokens::Tokens;
 
 pub fn process(input: b::Output) -> Result<Output, Span<Error>> {
@@ -24,6 +25,21 @@ pub fn process(input: b::Output) -> Result<Output, Span<Error>> {
 pub struct Expr {
     pub operation: Span<Operation>,
     pub operands: Vec<Span<Operand>>,
+}
+
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "({} {})",
+            self.operation.inner,
+            self.operands
+                .iter()
+                .map(|operand| operand.inner.to_string())
+                .collect::<Vec<String>>()
+                .join(" ")
+        )
+    }
 }
 
 impl Expr {
@@ -57,6 +73,12 @@ pub struct Operation {
     pub name: String,
 }
 
+impl fmt::Display for Operation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 impl Operation {
     fn parse(tokens: &mut Tokens) -> Result<Span<Self>, Span<Error>> {
         let Some(Span {
@@ -78,6 +100,17 @@ pub enum Operand {
     Symbol(Symbol),
 }
 
+impl fmt::Display for Operand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Expr(it) => it.fmt(f),
+            Self::Rational(it) => it.fmt(f),
+            Self::StrLit(it) => it.fmt(f),
+            Self::Symbol(it) => it.fmt(f),
+        }
+    }
+}
+
 impl Operand {
     fn parse(tokens: &mut Tokens) -> Result<Option<Span<Operand>>, Span<Error>> {
         let determinant = tokens
@@ -97,7 +130,10 @@ impl Operand {
         tokens.advance();
 
         match determinant.inner {
-            Token::Rational(val) => Ok(Operand::Rational(Rational { val })),
+            Token::Rational(val) => {
+                let val = val.parse::<f64>().unwrap();
+                Ok(Operand::Rational(Rational { val }))
+            }
             Token::StrLit(content) => Ok(Operand::StrLit(StrLit { content })),
             Token::Symbol(name) => Ok(Operand::Symbol(Symbol { name })),
             _ => Err(Error::expected(err::Subject::Operand)),
@@ -109,7 +145,13 @@ impl Operand {
 
 #[derive(Debug)]
 pub struct Rational {
-    pub val: String,
+    pub val: f64,
+}
+
+impl fmt::Display for Rational {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.val)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -117,12 +159,38 @@ pub struct StrLit {
     pub content: String,
 }
 
+impl fmt::Display for StrLit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "\"{}\"", self.content)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Symbol {
     pub name: String,
 }
 
+impl fmt::Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Output {
     pub ast: Vec<Span<Expr>>,
+}
+
+impl fmt::Display for Output {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.ast
+                .iter()
+                .map(|expr| expr.inner.to_string())
+                .collect::<Vec<String>>()
+                .join("\n")
+        )
+    }
 }

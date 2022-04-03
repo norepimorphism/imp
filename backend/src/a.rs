@@ -218,6 +218,20 @@ pub struct Output {
     pub tokens: Vec<Span<Token>>,
 }
 
+impl fmt::Display for Output {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.tokens
+                .iter()
+                .map(|token| token.inner.to_string())
+                .collect::<Vec<String>>()
+                .join(" ")
+        )
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
     Invalid(char),

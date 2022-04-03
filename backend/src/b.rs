@@ -33,6 +33,7 @@ fn enclose_in_parens(tokens: &mut Vec<Span<a::Token>>) {
     }
 }
 
+/// Desugars operators into operations.
 fn resolve_operators(tokens: Vec<Span<a::Token>>) -> Vec<Span<Token>> {
     tokens
         .into_iter()
@@ -110,4 +111,18 @@ impl fmt::Display for Token {
 #[derive(Debug, Default)]
 pub struct Output {
     pub tokens: Vec<Span<Token>>,
+}
+
+impl fmt::Display for Output {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.tokens
+                .iter()
+                .map(|token| token.inner.to_string())
+                .collect::<Vec<String>>()
+                .join(" ")
+        )
+    }
 }
