@@ -17,7 +17,7 @@ pub struct Interp {
 
 impl Interp {
     fn eval_expr(&self, expr: Expr) -> Result<Operand, opn::Error> {
-        let operation = OPERATIONS.get(&expr.operation.inner.name).unwrap();
+        let operation = OPERATIONS.get(&expr.operation.inner.name.as_str()).unwrap();
         let operands = expr.operands
             .into_iter()
             .map(|operand| {

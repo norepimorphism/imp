@@ -39,11 +39,11 @@ pub enum Error {
 }
 
 #[static_init::dynamic]
-pub static OPERATIONS: HashMap<String, Operation, RandomState> = HashMap::from_iter([
-    ("add".to_string(), arith::ADD),
-    ("sub".to_string(), arith::SUB),
-    ("mul".to_string(), arith::MUL),
-    ("div".to_string(), arith::DIV),
+pub static OPERATIONS: HashMap<&'static str, Operation, RandomState> = HashMap::from_iter([
+    ("add", arith::ADD),
+    ("sub", arith::SUB),
+    ("mul", arith::MUL),
+    ("div", arith::DIV),
     // ("sum", arith::SUM),
     // ("prod", arith::PROD),
     // ("int", calc::INT),
