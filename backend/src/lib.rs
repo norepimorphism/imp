@@ -71,6 +71,10 @@ pub fn process(
         a(&output);
     }
 
+    if output.tokens.is_empty() {
+        return Ok(Vec::new());
+    }
+
     let output = b::process(output);
     if let Some(b) = cb.b {
         b(&output);
