@@ -23,15 +23,23 @@ fn eval_expr(expr: Expr) -> Result<Operand, Error> {
         .map(|operand| operand.map(Operand::from))
         .enumerate()
         .map(|(idx, operand)| {
+            if idx >= operation.sig.len() {
+                return Err(Error::ExtraOperand);
+            }
+
             let expected_type = operation.sig[idx];
 
             if !operand.inner.is_type_valid(expected_type) {
-                return Err(Error::UnexpectedType);
+                return Err(Error::UnexpectedOperandType);
             }
 
             Ok(operand::Raw::new(operand.inner))
         })
         .collect::<Result<Vec<operand::Raw>, Error>>()?;
+
+    if operands.len() < operation.sig.len() {
+        return Err(Error::MissingOperand);
+    }
 
     // Execute the operation with its operands.
     (operation.exe)(operands.as_slice()).map_err(Error::Operation)
@@ -44,9 +52,10 @@ pub enum Output {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
-    InvalidType,
+    ExtraOperand,
+    MissingOperand,
     Operation(operation::Error),
-    UnexpectedType,
+    UnexpectedOperandType,
     UnknownOperation { name: String },
 }
 
