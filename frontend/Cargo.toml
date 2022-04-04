@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 ansi_term = { version = "0.12", features = ["derive_serde_style"] }
+enable-ansi-support = "0.1"
 imp-backend = { path = "../backend" }
 serde = { version = "1.0", features = ["derive"] }
 supports-color = "1.3"

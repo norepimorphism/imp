@@ -42,6 +42,8 @@ fn main() -> ExitCode {
 }
 
 fn main_impl() -> Result<(), err::FrontendError> {
+    let _ = enable_ansi_support::enable_ansi_support();
+
     let args = Args::get()
         .map_err(err::FrontendError::Args)?;
 
