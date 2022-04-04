@@ -16,95 +16,92 @@
 //! [IMP]: https://crates.io/crates/imp-backend
 //! [supports-color]: https://crates.io/crates/supports-color
 
-#![feature(process_exitcode_placeholder)]
+#![feature(let_else, process_exitcode_placeholder)]
 
+mod args;
 mod cmd;
+mod config;
+mod err;
 mod imp;
 
-use imp_backend::e::Interp;
+use args::Args;
+use config::Config;
 use std::{
-    fmt,
     io::{self, Write as _},
     process::ExitCode,
 };
 
 fn main() -> ExitCode {
-    // This interpreter lives for the entire duration of the program. It is continually accessed and
-    // mutated by [shell commands](cmd::process) and [IMPL expressions](imp::process).
-    let mut interp = Interp::default();
-    loop {
-        do_shell(&mut interp);
-    }
+    if let Err(e) = main_impl() {
+        eprintln!("{}", e);
 
-    // Note: don't bother removing this line; it is likely that an error within this scope will be
-    // possible at some point.
-    ExitCode::SUCCESS
-}
-
-/// Prints the shell prompt, reads user input, and executes the appropriate processor function.
-fn do_shell(interp: &mut Interp) {
-    print_shell_prompt();
-    let user_input = read_user_input();
-
-    if cmd::is_cmd(user_input.as_str()) {
-        cmd::process(interp, user_input.as_str());
+        ExitCode::from(e.exit_code())
     } else {
-        imp::process(interp, user_input.as_str());
+        ExitCode::SUCCESS
     }
 }
 
-fn print_shell_prompt() {
-    print!(
-        "{} ",
-        color(
-            supports_color::Stream::Stdout,
-            ">".to_string(),
-            ansi_term::Style::new().bold().fg(ansi_term::Color::Green),
-        )
-    );
-}
+fn main_impl() -> Result<(), err::FrontendError> {
+    let args = Args::get()
+        .map_err(err::FrontendError::Args)?;
 
-fn read_user_input() -> String {
-    let _ = io::stdout().lock().flush();
-    let mut input = String::new();
-    // TODO: Handle error.
-    let _ = io::stdin().read_line(&mut input);
+    if args.should_print_vers {
+        print_version();
+    } else {
+        let config = args.config_filepath
+            .map(|it| Config::read(it).map_err(err::FrontendError::Config))
+            .unwrap_or_else(|| Ok(Config::default()))?;
 
-    input
-}
-
-enum Stage {
-    A,
-    B,
-    C,
-    D,
-    E,
-}
-
-impl fmt::Display for Stage {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", match self {
-            Self::A => 'a',
-            Self::B => 'b',
-            Self::C => 'c',
-            Self::D => 'd',
-            Self::E => 'e',
-        })
+        let shell = Shell { config };
+        loop {
+            shell.do_shell();
+        }
     }
+
+    Ok(())
 }
 
-// Prints an error message.
-fn print_error(stage: Stage, e: impl std::error::Error) {
-    eprintln!(
-        "{}[{}]: {}",
-        color(
-            supports_color::Stream::Stderr,
-            "error".to_string(),
-            ansi_term::Style::new().bold().fg(ansi_term::Color::Red),
-        ),
-        stage,
-        e,
-    );
+fn print_version() {
+    println!(env!("CARGO_PKG_VERSION"));
+}
+
+struct Shell {
+    config: Config,
+}
+
+impl Shell {
+    /// Prints the shell prompt, reads user input, and executes the appropriate processor function.
+    fn do_shell(&self) {
+        self.print_prompt();
+        let user_input = Self::read_user_input();
+
+        if cmd::is_cmd(user_input.as_str()) {
+            cmd::process(user_input.as_str());
+        } else {
+            imp::process(user_input.as_str());
+        }
+    }
+
+    fn print_prompt(&self) {
+        print!(
+            "{}{}",
+            color(
+                supports_color::Stream::Stdout,
+                ">".to_string(),
+                ansi_term::Style::new().bold().fg(self.config.colors.prompt),
+            ),
+            std::iter::repeat(' ').take(self.config.prompt.padding).collect::<String>()
+        );
+    }
+
+    fn read_user_input() -> String {
+        let _ = io::stdout().lock().flush();
+        let mut input = String::new();
+        // TODO: Handle error.
+        let _ = io::stdin().read_line(&mut input);
+
+        input
+    }
 }
 
 fn color(stream: supports_color::Stream, input: String, style: ansi_term::Style) -> String {
