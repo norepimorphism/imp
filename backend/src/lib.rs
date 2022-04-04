@@ -52,6 +52,7 @@ pub mod c;
 pub mod d;
 pub mod span;
 
+use rayon::prelude::*;
 use span::Span;
 use std::fmt;
 
@@ -85,7 +86,7 @@ pub fn process(
         c(&output);
     }
 
-    Ok(output.ast.into_iter().map(|expr| d::process(expr.inner).unwrap()).collect())
+    Ok(output.ast.into_par_iter().map(|expr| d::process(expr.inner).unwrap()).collect())
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
