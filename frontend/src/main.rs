@@ -19,20 +19,22 @@
 #![feature(let_else, process_exitcode_placeholder)]
 
 mod args;
-mod cmd;
 mod config;
 mod err;
-mod imp;
+mod shell;
 
 use args::Args;
 use config::Config;
+use shell::Shell;
 use std::{
-    io::{self, Write as _},
     process::ExitCode,
 };
 
 fn main() -> ExitCode {
     if let Err(e) = main_impl() {
+        // An error has occured in the frontend. Unlike backend errors---which only live for the
+        // lifetime of one line of user input---frontend errors are fatal.
+
         eprintln!("{}", e);
 
         ExitCode::from(e.exit_code())
@@ -42,6 +44,8 @@ fn main() -> ExitCode {
 }
 
 fn main_impl() -> Result<(), err::FrontendError> {
+    // Windows requires ANSI escape codes support to be explicitly enabled. This is a no-op on non-
+    // Windows platforms.
     let _ = enable_ansi_support::enable_ansi_support();
 
     let args = Args::get()
@@ -49,71 +53,38 @@ fn main_impl() -> Result<(), err::FrontendError> {
 
     if args.should_print_vers {
         print_version();
-    } else {
-        let config = args.config_filepath
-            .map(|it| Config::read(it).map_err(err::FrontendError::Config))
-            .unwrap_or_else(|| Ok(Config::default()))?;
 
-        let shell = Shell { config };
-        loop {
-            shell.do_shell();
-        }
+        return Ok(());
     }
 
-    Ok(())
+    let config = args.config_filepath
+        .map(|it| Config::read(it).map_err(err::FrontendError::Config))
+        .unwrap_or_else(|| {
+            // A configuration file was not specified, so defaults will be used.
+            Ok(Config::default())
+        })?;
+
+    let shell = Shell::new(config);
+    loop {
+        shell.interpret_line();
+    }
 }
 
 fn print_version() {
     println!(env!("CARGO_PKG_VERSION"));
 }
 
-struct Shell {
-    config: Config,
-}
-
-impl Shell {
-    /// Prints the shell prompt, reads user input, and executes the appropriate processor function.
-    fn do_shell(&self) {
-        self.print_prompt();
-        let user_input = Self::read_user_input();
-
-        if cmd::is_cmd(user_input.as_str()) {
-            cmd::process(user_input.as_str());
-        } else {
-            imp::process(user_input.as_str());
-        }
-    }
-
-    fn print_prompt(&self) {
-        print!(
-            "{}{}",
-            color(
-                supports_color::Stream::Stdout,
-                ">".to_string(),
-                ansi_term::Style::new().bold().fg(self.config.colors.prompt),
-            ),
-            std::iter::repeat(' ').take(self.config.prompt.padding).collect::<String>()
-        );
-    }
-
-    fn read_user_input() -> String {
-        let _ = io::stdout().lock().flush();
-        let mut input = String::new();
-        // TODO: Handle error.
-        let _ = io::stdin().read_line(&mut input);
-
-        input
-    }
-}
-
 fn color(stream: supports_color::Stream, input: String, style: ansi_term::Style) -> String {
     if supports_ansi_color(stream) {
-        format!("{}", style.paint(input))
+        style.paint(input).to_string()
     } else {
         input
     }
 }
 
 fn supports_ansi_color(stream: supports_color::Stream) -> bool {
+    // TODO: This only checks for basic ANSI color support, but the configuration file can specify
+    // 8-bit colors. At the same time, color shouldn't be disabled if the terminal doesn't support
+    // 8-bit colors and the user only needs basic colors.
     supports_color::on_cached(stream).map_or(false, |it| it.has_basic)
 }

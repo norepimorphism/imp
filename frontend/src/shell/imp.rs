@@ -1,22 +1,16 @@
-use imp_backend::{e::Interp};
-
-pub fn process(interp: &mut Interp, input: &str) {
+pub fn process(input: &str) {
     let result = imp_backend::process(
-        interp,
         input,
         imp_backend::Callbacks {
             a: Some(|out| {
-                // println!("A: {:#?}", out);
+                // println!("A: {}", out);
             }),
             b: Some(|out| {
-                // println!("B: {:#?}", out);
+                // println!("B: {}", out);
             }),
             c: Some(|out| {
-                // println!("C: {:#?}", out);
+                // println!("C: {}", out);
             }),
-            d: Some(|out| {
-
-            })
         },
     );
 
@@ -27,24 +21,27 @@ pub fn process(interp: &mut Interp, input: &str) {
             }
         }
         Err(e) => {
-            use crate::Stage;
+            use crate::err::{self, Stage};
             use imp_backend::Error;
 
             print_span(&e.range);
 
-            let stage = match e.inner {
-                Error::A(_) => Stage::A,
-                Error::C(_) => Stage::C,
-                Error::D(_) => Stage::D,
-                Error::E(_) => Stage::E,
-            };
-
-            crate::print_error(stage, e);
+            eprintln!(
+                "{}",
+                err::BackendError {
+                    stage: match e.inner {
+                        Error::A(_) => Stage::A,
+                        Error::C(_) => Stage::C,
+                        Error::D(_) => Stage::D,
+                    },
+                    inner: e.inner,
+                },
+            )
         }
     }
 }
 
-fn print_output(output: imp_backend::e::Output) {
+fn print_output(output: imp_backend::d::Output) {
     print!(
         "  {} ",
         crate::color(
@@ -55,10 +52,10 @@ fn print_output(output: imp_backend::e::Output) {
     );
 
     match output {
-        imp_backend::e::Output::Text(text) => {
+        imp_backend::d::Output::Text(text) => {
             print!("{}", text);
         }
-        imp_backend::e::Output::Graphic => {
+        imp_backend::d::Output::Graphic => {
             todo!()
         }
     }
