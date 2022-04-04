@@ -25,6 +25,12 @@ imp - evaluate mathematical expressions
 **0**
 : Success
 
+**1**
+: Argument error
+
+**2**
+: Configuration error
+
 # BUGS
 If you encounter any bugs, please create an issue for each at <https://github.com/norepimorphism/imp>. Thanks!
 
