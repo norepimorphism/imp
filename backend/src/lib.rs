@@ -63,10 +63,7 @@ pub struct Callbacks {
     pub c: Option<fn(&c::Output)>,
 }
 
-pub fn process(
-    impl_code: &str,
-    cb: Callbacks,
-) -> Result<Vec<d::Output>, Span<Error>> {
+pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<d::Output>, Span<Error>> {
     let output = a::process(impl_code).map_err(|e| e.map(Error::A))?;
     if let Some(a) = cb.a {
         a(&output);
@@ -86,7 +83,12 @@ pub fn process(
         c(&output);
     }
 
-    Ok(output.ast.into_par_iter().map(|expr| d::process(expr.inner).unwrap()).collect())
+    output
+        .ast
+        .into_par_iter()
+        .map(|expr| d::process(expr.inner).unwrap())
+        .map(Ok)
+        .collect()
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -105,13 +107,5 @@ impl fmt::Display for Error {
             Self::C(e) => e.fmt(f),
             Self::D(e) => e.fmt(f),
         }
-    }
-}
-
-impl std::error::Error for Span<Error> {}
-
-impl fmt::Display for Span<Error> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.inner.fmt(f)
     }
 }

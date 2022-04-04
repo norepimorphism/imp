@@ -5,7 +5,10 @@ mod tokens;
 
 pub use err::Error;
 
-use crate::{b::{self, Token}, span::Span};
+use crate::{
+    b::{self, Token},
+    span::Span,
+};
 use std::fmt;
 use tokens::Tokens;
 
@@ -44,10 +47,7 @@ impl fmt::Display for Expr {
 
 impl Expr {
     fn parse(tokens: &mut Tokens) -> Result<Span<Self>, Span<Error>> {
-        let l_paren = tokens.expect(
-            err::Subject::Expr,
-            |token| token.inner == Token::LParen,
-        )?;
+        let l_paren = tokens.expect(err::Subject::Expr, |token| token.inner == Token::LParen)?;
 
         let operation = Operation::parse(tokens)?;
 
@@ -56,13 +56,15 @@ impl Expr {
             operands.push(operand);
         }
 
-        let r_paren = tokens.expect(
-            err::Subject::Token(Some(Token::RParen)),
-            |token| token.inner == Token::RParen,
-        )?;
+        let r_paren = tokens.expect(err::Subject::Token(Some(Token::RParen)), |token| {
+            token.inner == Token::RParen
+        })?;
 
         Ok(Span::new(
-            Self { operation, operands },
+            Self {
+                operation,
+                operands,
+            },
             (l_paren.range.start)..(r_paren.range.end),
         ))
     }
@@ -88,7 +90,12 @@ impl Operation {
             return Err(tokens.fail(Error::expected(err::Subject::Operation)));
         };
 
-        Ok(Span::new(Self { name: name.to_string() }, range))
+        Ok(Span::new(
+            Self {
+                name: name.to_string(),
+            },
+            range,
+        ))
     }
 }
 

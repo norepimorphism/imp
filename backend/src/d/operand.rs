@@ -60,9 +60,15 @@ pub union Raw {
 impl Raw {
     pub fn new(operand: Operand) -> Self {
         match operand {
-            Operand::Rational(it) => Self { rational: ManuallyDrop::new(it) },
-            Operand::StrLit(it) => Self { str_lit: ManuallyDrop::new(it) },
-            Operand::Symbol(it) => Self { symbol: ManuallyDrop::new(it) },
+            Operand::Rational(it) => Self {
+                rational: ManuallyDrop::new(it),
+            },
+            Operand::StrLit(it) => Self {
+                str_lit: ManuallyDrop::new(it),
+            },
+            Operand::Symbol(it) => Self {
+                symbol: ManuallyDrop::new(it),
+            },
         }
     }
 }

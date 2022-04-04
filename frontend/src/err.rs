@@ -66,11 +66,15 @@ pub enum Stage {
 
 impl fmt::Display for Stage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", match self {
-            Self::A => 'a',
-            Self::B => 'b',
-            Self::C => 'c',
-            Self::D => 'd',
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::A => 'a',
+                Self::B => 'b',
+                Self::C => 'c',
+                Self::D => 'd',
+            }
+        )
     }
 }

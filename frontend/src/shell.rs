@@ -33,7 +33,9 @@ impl Shell {
                 ">".to_string(),
                 ansi_term::Style::new().bold().fg(self.config.colors.prompt),
             ),
-            std::iter::repeat(' ').take(self.config.prompt.padding).collect::<String>()
+            std::iter::repeat(' ')
+                .take(self.config.prompt.padding)
+                .collect::<String>()
         );
     }
 

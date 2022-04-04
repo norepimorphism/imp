@@ -1,4 +1,10 @@
-use crate::{c::Rational, d::{operand::{self, Operand}, operation::Operation}};
+use crate::{
+    c::Rational,
+    d::{
+        operand::{self, Operand},
+        operation::Operation,
+    },
+};
 
 macro_rules! unary {
     ($name:ident, $op:tt) => {

@@ -1,6 +1,6 @@
+use super::err::{self, Error};
 use crate::{b::Token, span::Span};
 use std::ops::Range;
-use super::err::{self, Error};
 
 pub struct Tokens {
     inner: Vec<Span<Token>>,
@@ -9,17 +9,18 @@ pub struct Tokens {
 
 impl Tokens {
     pub fn new(inner: Vec<Span<Token>>) -> Self {
-        Self {
-            inner,
-            idx: 0,
-        }
+        Self { inner, idx: 0 }
     }
 
     pub fn is_empty(&self) -> bool {
         self.idx >= self.inner.len()
     }
 
-    pub fn expect(&mut self, err_subj: err::Subject, pred: impl Fn(&Span<Token>) -> bool) -> Result<Span<Token>, Span<Error>> {
+    pub fn expect(
+        &mut self,
+        err_subj: err::Subject,
+        pred: impl Fn(&Span<Token>) -> bool,
+    ) -> Result<Span<Token>, Span<Error>> {
         let peeked = self
             .peek()
             .ok_or_else(|| self.fail(Error::expected(err_subj.clone())))?;
@@ -42,16 +43,14 @@ impl Tokens {
     }
 
     pub fn peek_next_span_range(&self) -> Range<usize> {
-        self
-            .peek()
-            .map_or_else(
-                || {
-                    let prev_range = self.peek_prev_span_range();
+        self.peek().map_or_else(
+            || {
+                let prev_range = self.peek_prev_span_range();
 
-                    (prev_range.end)..(prev_range.end + 1)
-                },
-                |token| token.range,
-            )
+                (prev_range.end)..(prev_range.end + 1)
+            },
+            |token| token.range,
+        )
     }
 
     pub fn peek_prev_span_range(&self) -> Range<usize> {

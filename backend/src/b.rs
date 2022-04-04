@@ -15,7 +15,13 @@ pub fn process(mut input: a::Output) -> Output {
 /// recognize expressions which are enclosed in parentheses. Here, we add these parentheses if they
 /// were omitted.
 fn enclose_in_parens(tokens: &mut Vec<Span<a::Token>>) {
-    if !matches!(tokens.first(), Some(Span { inner: a::Token::LParen, range: _ })) {
+    if !matches!(
+        tokens.first(),
+        Some(Span {
+            inner: a::Token::LParen,
+            range: _
+        })
+    ) {
         // An outer left parenthesis wasn't found.
 
         // The length of this span is 0 so that it will never be shown in an error; this is
@@ -28,7 +34,8 @@ fn enclose_in_parens(tokens: &mut Vec<Span<a::Token>>) {
             // This `expect` is OK because we know that `tokens` isn't empty; `tokens.first()`
             // matched with a `Some(_)` pattern, after all.
             .expect("`tokens` should not be empty")
-            .range.end;
+            .range
+            .end;
         tokens.push(Span::new(a::Token::RParen, end..end));
     }
 }
@@ -38,22 +45,20 @@ fn resolve_operators(tokens: Vec<Span<a::Token>>) -> Vec<Span<Token>> {
     tokens
         .into_iter()
         .map(|token| {
-            token.map(|token| {
-                match token {
-                    a::Token::LParen => Token::LParen,
-                    a::Token::RParen => Token::RParen,
-                    a::Token::LBrace => Token::LBrace,
-                    a::Token::RBrace => Token::RBrace,
-                    a::Token::Plus => Token::Symbol("add".to_string()),
-                    a::Token::Minus => Token::Symbol("sub".to_string()),
-                    a::Token::Star => Token::Symbol("mul".to_string()),
-                    a::Token::Slash => Token::Symbol("div".to_string()),
-                    a::Token::Dollar => Token::Dollar,
-                    a::Token::Hash => Token::Hash,
-                    a::Token::Rational(it) => Token::Rational(it),
-                    a::Token::StrLit(it) => Token::StrLit(it),
-                    a::Token::Symbol(it) => Token::Symbol(it),
-                }
+            token.map(|token| match token {
+                a::Token::LParen => Token::LParen,
+                a::Token::RParen => Token::RParen,
+                a::Token::LBrace => Token::LBrace,
+                a::Token::RBrace => Token::RBrace,
+                a::Token::Plus => Token::Symbol("add".to_string()),
+                a::Token::Minus => Token::Symbol("sub".to_string()),
+                a::Token::Star => Token::Symbol("mul".to_string()),
+                a::Token::Slash => Token::Symbol("div".to_string()),
+                a::Token::Dollar => Token::Dollar,
+                a::Token::Hash => Token::Hash,
+                a::Token::Rational(it) => Token::Rational(it),
+                a::Token::StrLit(it) => Token::StrLit(it),
+                a::Token::Symbol(it) => Token::Symbol(it),
             })
         })
         .collect()

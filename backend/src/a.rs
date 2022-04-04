@@ -44,8 +44,7 @@ pub fn process(impl_code: &str) -> Result<Output, Span<Error>> {
 }
 
 fn break_into_chars(it: &str) -> Peekable<impl Iterator<Item = IndexedChar> + '_> {
-    it
-        .chars()
+    it.chars()
         .enumerate()
         .map(|(idx, val)| IndexedChar { idx, val })
         .peekable()
@@ -83,7 +82,7 @@ fn tokenize(
         .map(Ok)
         .unwrap_or_else(|| {
             // Neither a compatible multi- nor single-character tokenizer was found.
-            Err(Error::Invalid(first_ch ))
+            Err(Error::Invalid(first_ch))
         })
 }
 

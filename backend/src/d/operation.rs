@@ -2,9 +2,9 @@ mod arith;
 mod calc;
 mod trig;
 
-use ahash::{RandomState};
-use std::collections::HashMap;
 use super::operand::{self, Operand};
+use ahash::RandomState;
+use std::collections::HashMap;
 
 pub struct Operation {
     pub sig: &'static [operand::Kind],
@@ -16,6 +16,8 @@ pub enum Error {}
 
 #[static_init::dynamic]
 pub static OPERATIONS: HashMap<&'static str, Operation, RandomState> = HashMap::from_iter([
+    // ("simplify", todo!()),
+    // ("solve", todo!()),
     ("add", arith::ADD),
     ("sub", arith::SUB),
     ("mul", arith::MUL),

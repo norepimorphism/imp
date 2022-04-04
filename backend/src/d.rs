@@ -15,9 +15,12 @@ pub fn process(expr: Expr) -> Result<Output, Error> {
 fn eval_expr(expr: Expr) -> Result<Operand, Error> {
     let operation = OPERATIONS
         .get(&expr.operation.inner.name.as_str())
-        .ok_or_else(|| Error::UnknownOperation { name: expr.operation.inner.name.clone() })?;
+        .ok_or_else(|| Error::UnknownOperation {
+            name: expr.operation.inner.name.clone(),
+        })?;
 
-    let operands = expr.operands
+    let operands = expr
+        .operands
         .into_iter()
         // Recursively evaluate subexpressions (see [`Operand::from`]).
         .map(|operand| operand.map(Operand::from))

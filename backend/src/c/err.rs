@@ -37,7 +37,7 @@ impl Error {
     }
 
     pub fn subject(&self) -> &Subject {
-         &self.subject
+        &self.subject
     }
 }
 

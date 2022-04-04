@@ -26,9 +26,7 @@ mod shell;
 use args::Args;
 use config::Config;
 use shell::Shell;
-use std::{
-    process::ExitCode,
-};
+use std::process::ExitCode;
 
 fn main() -> ExitCode {
     if let Err(e) = main_impl() {
@@ -48,8 +46,7 @@ fn main_impl() -> Result<(), err::FrontendError> {
     // Windows platforms.
     let _ = enable_ansi_support::enable_ansi_support();
 
-    let args = Args::get()
-        .map_err(err::FrontendError::Args)?;
+    let args = Args::get().map_err(err::FrontendError::Args)?;
 
     if args.should_print_vers {
         print_version();
@@ -57,7 +54,8 @@ fn main_impl() -> Result<(), err::FrontendError> {
         return Ok(());
     }
 
-    let config = args.config_filepath
+    let config = args
+        .config_filepath
         .map(|it| Config::read(it).map_err(err::FrontendError::Config))
         .unwrap_or_else(|| {
             // A configuration file was not specified, so defaults will be used.
