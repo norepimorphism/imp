@@ -9,6 +9,7 @@ use crate::{
     b::{self, Token},
     span::Span,
 };
+use rust_decimal::Decimal;
 use std::fmt;
 use tokens::Tokens;
 
@@ -138,7 +139,7 @@ impl Operand {
 
         match determinant.inner {
             Token::Rational(val) => {
-                let val = val.parse::<f64>().unwrap();
+                let val = Decimal::from_str_exact(val.as_str()).unwrap();
                 Ok(Operand::Rational(Rational { val }))
             }
             Token::StrLit(content) => Ok(Operand::StrLit(StrLit { content })),
@@ -152,7 +153,7 @@ impl Operand {
 
 #[derive(Debug)]
 pub struct Rational {
-    pub val: f64,
+    pub val: Decimal,
 }
 
 impl fmt::Display for Rational {
