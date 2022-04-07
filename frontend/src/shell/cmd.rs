@@ -1,9 +1,11 @@
+use super::Shell;
+
 /// Determines if user input is a shell command.
 pub fn is_cmd(it: &str) -> bool {
     it.starts_with(':')
 }
 
-pub fn process<'a>(cmd: &'a str) {
+pub fn process<'a>(this: &Shell, cmd: &'a str) {
     let (name, _) = split(cmd);
     match name {
         "h" | "help" => {

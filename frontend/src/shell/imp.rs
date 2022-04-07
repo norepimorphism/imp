@@ -1,4 +1,6 @@
-pub fn process(input: &str) {
+use super::Shell;
+
+pub fn process(this: &Shell, input: &str) {
     let result = imp_backend::process(
         input,
         imp_backend::Callbacks {
@@ -17,14 +19,14 @@ pub fn process(input: &str) {
     match result {
         Ok(op) => {
             for output in op {
-                print_output(output);
+                print_output(this, output);
             }
         }
         Err(e) => {
             use crate::err::{self, Stage};
             use imp_backend::Error;
 
-            print_span(&e.range);
+            print_span(this, &e.range);
 
             eprintln!(
                 "{}",
@@ -41,7 +43,7 @@ pub fn process(input: &str) {
     }
 }
 
-fn print_output(output: imp_backend::d::Output) {
+fn print_output(this: &Shell, output: imp_backend::d::Output) {
     print!(
         "  {} ",
         crate::color(
@@ -63,11 +65,9 @@ fn print_output(output: imp_backend::d::Output) {
     println!()
 }
 
-fn print_span(range: &std::ops::Range<usize>) {
+fn print_span(this: &Shell, range: &std::ops::Range<usize>) {
     // Match the shell prompt (` >`).
-    // TODO: automatically update this value based on the shell prompt; doing so establishes, e.g.,
-    // the [`print_shell_prompt`] function, as the single source of truth.
-    eprint!("  ");
+    eprint!("{}", this.prompt_padding());
     // Print leading whitespace.
     eprint!("{0:<1$}", "", range.start);
     // Print the span.

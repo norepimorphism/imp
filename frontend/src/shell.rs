@@ -19,9 +19,9 @@ impl Shell {
         let user_input = Self::read_user_input();
 
         if cmd::is_cmd(user_input.as_str()) {
-            cmd::process(user_input.as_str());
+            cmd::process(self, user_input.as_str());
         } else {
-            imp::process(user_input.as_str());
+            imp::process(self, user_input.as_str())
         }
     }
 
@@ -33,10 +33,14 @@ impl Shell {
                 ">".to_string(),
                 ansi_term::Style::new().bold().fg(self.config.colors.prompt),
             ),
-            std::iter::repeat(' ')
-                .take(self.config.prompt.padding)
-                .collect::<String>()
+            self.prompt_padding(),
         );
+    }
+
+    fn prompt_padding(&self) -> String {
+        std::iter::repeat(' ')
+            .take(self.config.prompt.padding)
+            .collect()
     }
 
     fn read_user_input() -> String {
