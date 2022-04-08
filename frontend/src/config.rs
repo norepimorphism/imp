@@ -2,25 +2,28 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use serde::{Deserialize, Serialize};
 use std::{fmt, fs, path::Path};
 
-
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Config {
-    pub colors: Colors,
+    pub output: Output,
     pub prompt: Prompt,
+    pub spans: Spans,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            colors: Colors {
-                prompt: ansi_term::Color::Green,
-                error: ansi_term::Color::Red,
-                span: ansi_term::Color::Cyan,
+            output: Output {
+                color: ansi_term::Color::Yellow,
             },
             prompt: Prompt {
-                padding: 1,
+                color: ansi_term::Color::Green,
+                padding: 1
+            },
+            spans: Spans {
+                color: ansi_term::Color::Cyan,
             },
         }
     }
@@ -53,14 +56,18 @@ impl fmt::Display for Error {
     }
 }
 
-#[derive(Deserialize)]
-pub struct Colors {
-    pub prompt: ansi_term::Color,
-    pub error: ansi_term::Color,
-    pub span: ansi_term::Color,
+#[derive(Deserialize, Serialize)]
+pub struct Output {
+    pub color: ansi_term::Color,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Prompt {
+    pub color: ansi_term::Color,
     pub padding: usize,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct Spans {
+    pub color: ansi_term::Color,
 }

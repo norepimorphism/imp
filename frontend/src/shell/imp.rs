@@ -53,7 +53,7 @@ fn print_output(this: &Shell, output: imp_backend::d::Output) {
         crate::color(
             supports_color::Stream::Stdout,
             "=".to_string(),
-            ansi_term::Style::new().bold().fg(ansi_term::Color::Yellow)
+            ansi_term::Style::new().bold().fg(this.config.output.color)
         )
     );
 
@@ -80,7 +80,7 @@ fn print_span(this: &Shell, range: &std::ops::Range<usize>) {
         crate::color(
             supports_color::Stream::Stderr,
             "^".to_string(),
-            ansi_term::Style::new().bold().fg(ansi_term::Color::Cyan),
+            ansi_term::Style::new().bold().fg(this.config.spans.color),
         ),
         range
             .end

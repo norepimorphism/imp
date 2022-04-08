@@ -35,7 +35,7 @@ impl Shell {
             crate::color(
                 supports_color::Stream::Stdout,
                 ">".to_string(),
-                ansi_term::Style::new().bold().fg(self.config.colors.prompt),
+                ansi_term::Style::new().bold().fg(self.config.prompt.color),
             ),
             self.prompt_padding(),
         );
