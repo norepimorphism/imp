@@ -15,8 +15,11 @@ pub fn process<'a>(this: &Shell, cmd: &'a str) {
         "h" | "help" => {
             print_usage();
         }
-        "a" | "print-aliases" => {
+        "a" | "aliases" => {
             print_interp_aliases();
+        }
+        "c" | "config" => {
+            print_config(this);
         }
         // TODO: Add moar commands!
         // TODO: Handle invalid commands.
@@ -41,10 +44,15 @@ fn split(cmd: &str) -> (&str, Vec<&str>) {
 
 fn print_usage() {
     println!("Commands:");
-    println!("  :h, :help               Displays this usage information.");
-    println!("  :a, :print-aliases      Prints all defined aliases.");
+    println!("  :h, :help               Prints this usage information.");
+    println!("  :a, :aliases            Prints all defined aliases.");
+    println!("  :c, :config             Prints the current configuration.");
 }
 
 fn print_interp_aliases() {
     todo!()
+}
+
+fn print_config(this: &Shell) {
+    println!("{}", toml::to_string(&this.config).unwrap());
 }
