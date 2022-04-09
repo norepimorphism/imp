@@ -9,11 +9,11 @@
 //! ---between tokens and the source code so that erroneous code snippets may be identified and
 //! presented to the user.
 
-mod tkz;
+mod tokenizer;
 
 use crate::span::Span;
 use std::{fmt, iter::Peekable};
-use tkz::Tokenizer;
+use tokenizer::Tokenizer;
 
 /// Translates one or more lines of IMPL code into [a sequence of lexical tokens](Output).
 pub fn process(impl_code: &str) -> Result<Output, Span<Error>> {
@@ -91,6 +91,8 @@ fn tokenize(
 }
 
 fn find_compat_multi_tokenizer(ch: char) -> Option<&'static Tokenizer> {
+    use tokenizer as tkz;
+
     [
         tkz::SYMBOL,
         tkz::RATIONAL,
