@@ -4,8 +4,8 @@
 
 macro_rules! def_operation {
     ($name:ident, [ $($in_ty:tt),* ], [ $($in_id:tt),* ], $out_op_ty:tt, $out:expr $(,)?) => {
-        pub const $name: $crate::interp::operation::Operation = $crate::interp::operation::Operation {
-            sig: &[ $($crate::interp::operand::Kind::$in_ty),* ],
+        pub const $name: $crate::evaluator::operation::Operation = $crate::evaluator::operation::Operation {
+            sig: &[ $($crate::evaluator::operand::Kind::$in_ty),* ],
 
             exe: |
                 #[allow(unused_variables)]
@@ -19,7 +19,7 @@ macro_rules! def_operation {
                     let ops = &ops[1..];
                 )*
 
-                Ok($crate::interp::operation::Operand::$out_op_ty($out))
+                Ok($crate::evaluator::operation::Operand::$out_op_ty($out))
             },
         };
     };

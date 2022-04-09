@@ -62,10 +62,9 @@ impl fmt::Display for BackendError {
 }
 
 pub enum Stage {
-    A,
-    B,
-    C,
-    D,
+    Lexer,
+    Parser,
+    Evaluator,
 }
 
 impl fmt::Display for Stage {
@@ -74,10 +73,9 @@ impl fmt::Display for Stage {
             f,
             "{}",
             match self {
-                Self::A => 'a',
-                Self::B => 'b',
-                Self::C => 'c',
-                Self::D => 'd',
+                Self::Lexer => "lex",
+                Self::Parser => "parse",
+                Self::Evaluator => "eval",
             }
         )
     }

@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::diet::Token;
+use crate::lexer::Token;
 use std::fmt;
 
 /// A parser error.
@@ -69,13 +69,9 @@ impl fmt::Display for Cause {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Subject {
-    /// An [expression](crate::parser::Expr).
-    Expr,
     /// An [operand](crate::parser::Operand).
     Operand,
     Operation,
-    /// A [symbol](crate::parser::Symbol).
-    Symbol,
     /// A [lexical token](crate::lexer::Token).
     Token(Option<Token>),
 }
@@ -83,10 +79,8 @@ pub enum Subject {
 impl fmt::Display for Subject {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Expr => write!(f, "expression"),
             Self::Operand => write!(f, "operand"),
             Self::Operation => write!(f, "operation"),
-            Self::Symbol => write!(f, "symbol"),
             Self::Token(maybe) => {
                 write!(f, "token")?;
                 if let Some(it) = maybe {

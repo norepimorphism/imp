@@ -26,16 +26,17 @@ pub fn process(impl_code: &str) -> Result<Output, Span<Error>> {
         // Try to create a lexical token given the first character of the token's source code.
         let token = tokenize(&mut idxed_chars, first.val)
             .map(|tkzed| {
-                // Success!
+                // Success! `tkzed` contains our token (or not, if the tokenizer explicitly did not
+                // produce one---this is the case with, e.g., comments).
 
                 tkzed.maybe_token.map(|token| {
-                    // Include this token in the final sequence.
+                    // Wrap the token in a span and append it to the final sequence.
                     Span::new(token, (first.idx)..(first.idx + tkzed.len))
                 })
             })
             .map_err(|e| {
                 // Tokenization failed; this only occurs when the first character is incompatible
-                // with all tokenizers. The error range is therefore the first character.
+                // with all tokenizers. The span is therefore the first character.
                 Span::new(e, (first.idx)..(first.idx + 1))
             })?;
 
@@ -43,6 +44,8 @@ pub fn process(impl_code: &str) -> Result<Output, Span<Error>> {
             output.tokens.push(token);
         }
     }
+
+    enclose_in_parens(&mut output.tokens);
 
     Ok(output)
 }
@@ -93,6 +96,7 @@ fn tokenize(
 fn find_compat_multi_tokenizer(ch: char) -> Option<&'static Tokenizer> {
     use tokenizer as tkz;
 
+    // Try the tokenizers in this order.
     [
         tkz::SYMBOL,
         tkz::RATIONAL,
@@ -137,17 +141,46 @@ fn tokenize_single(ch: char) -> Option<Token> {
     match ch {
         '(' => Some(Token::LParen),
         ')' => Some(Token::RParen),
-        '{' => Some(Token::LBrace),
-        '}' => Some(Token::RBrace),
-        '+' => Some(Token::Plus),
-        '-' => Some(Token::Minus),
-        '*' => Some(Token::Star),
-        '/' => Some(Token::Slash),
-        '$' => Some(Token::Dollar),
-        '#' => Some(Token::Hash),
+        '+' => Some(Token::Symbol("add".to_string())),
+        '-' => Some(Token::Symbol("sub".to_string())),
+        '*' => Some(Token::Symbol("add".to_string())),
+        '/' => Some(Token::Symbol("div".to_string())),
+        '^' => Some(Token::Caret),
         _ => None,
     }
 }
+
+/// Encloses a token sequence in [`Token::LParen`] and [`Token::RParen`].
+///
+/// Although the IMPL grammar permits omitting outer parentheses, the parser is designed to only
+/// recognize expressions which are enclosed in parentheses. Here, we add these parentheses if they
+/// were omitted.
+fn enclose_in_parens(tokens: &mut Vec<Span<Token>>) {
+    if !matches!(
+        tokens.first(),
+        Some(Span {
+            inner: Token::LParen,
+            range: _
+        })
+    ) {
+        // An outer left parenthesis wasn't found.
+
+        // The length of this span is 0 so that it will never be shown in an error; this is
+        // important because the user never actually typed this parenthesis, so such a span would
+        // highlight the wrong character.
+        tokens.insert(0, Span::new(Token::LParen, 0..0));
+
+        let end = tokens
+            .last()
+            // This `expect` is OK because we know that `tokens` isn't empty; `tokens.first()`
+            // matched with a `Some(_)` pattern, after all.
+            .expect("`tokens` should not be empty")
+            .range
+            .end;
+        tokens.push(Span::new(Token::RParen, end..end));
+    }
+}
+
 
 /// The output of [`tokenize`].
 struct Tokenized {
@@ -160,6 +193,12 @@ struct Tokenized {
 /// A lexical token.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Token {
+    /// A rational number.
+    Rational(String),
+    /// A string literal.
+    StrLit(String),
+    /// A symbol.
+    Symbol(String),
     /// A left, or opening, parenthesis (`(`).
     LParen,
     /// A right, or closing, parenthesis (`)`).
@@ -168,42 +207,27 @@ pub enum Token {
     LBrace,
     /// A right, or closing, brace (`}`).
     RBrace,
-    /// A plus sign (`+`).
-    Plus,
-    /// A minus sign (`-`).
-    Minus,
-    /// An asterisk (`*`).
-    Star,
-    /// A forward slash (`/`).
-    Slash,
     /// A dollar sign (`$`).
     Dollar,
     /// A hash sign (`#`).
     Hash,
-    /// A rational number.
-    Rational(String),
-    /// A string literal.
-    StrLit(String),
-    /// A symbol.
-    Symbol(String),
+    /// A caret (`^`).
+    Caret,
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let it = match self {
+            Self::Rational(it) => it.to_string(),
+            Self::StrLit(it) => it.to_string(),
+            Self::Symbol(it) => format!("\\{}", it),
             Self::LParen => '('.to_string(),
             Self::RParen => ')'.to_string(),
             Self::LBrace => '{'.to_string(),
             Self::RBrace => '}'.to_string(),
-            Self::Plus => '+'.to_string(),
-            Self::Minus => '-'.to_string(),
-            Self::Star => '*'.to_string(),
-            Self::Slash => '/'.to_string(),
             Self::Dollar => '$'.to_string(),
             Self::Hash => '#'.to_string(),
-            Self::Rational(it) => it.to_string(),
-            Self::StrLit(it) => it.to_string(),
-            Self::Symbol(it) => format!("\\{}", it),
+            Self::Caret => '^'.to_string(),
         };
 
         write!(

@@ -50,9 +50,8 @@
 #![feature(let_else)]
 
 pub mod lexer;
-pub mod diet;
 pub mod parser;
-pub mod interp;
+pub mod evaluator;
 pub mod span;
 
 use rayon::prelude::*;
@@ -62,11 +61,10 @@ use std::fmt;
 /// Callbacks for [`process`].
 pub struct Callbacks {
     pub lexer: Option<fn(&lexer::Output)>,
-    pub diet: Option<fn(&diet::Output)>,
     pub parser: Option<fn(&parser::Output)>,
 }
 
-pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<interp::Output>, Span<Error>> {
+pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<evaluator::Output>, Span<Error>> {
     let output = lexer::process(impl_code).map_err(|e| e.map(Error::Lexer))?;
     if let Some(cb) = cb.lexer {
         cb(&output);
@@ -74,11 +72,6 @@ pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<interp::Output>, Sp
 
     if output.tokens.is_empty() {
         return Ok(Vec::new());
-    }
-
-    let output = diet::process(output);
-    if let Some(cb) = cb.diet {
-        cb(&output);
     }
 
     let output = parser::process(output).map_err(|e| e.map(Error::Parser))?;
@@ -89,7 +82,7 @@ pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<interp::Output>, Sp
     output
         .ast
         .into_par_iter()
-        .map(|expr| interp::process(expr.inner).unwrap())
+        .map(|expr| evaluator::process(expr.inner).unwrap())
         .map(Ok)
         .collect()
 }
@@ -98,7 +91,7 @@ pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<interp::Output>, Sp
 pub enum Error {
     Lexer(lexer::Error),
     Parser(parser::Error),
-    Interp(interp::Error),
+    Evaluator(evaluator::Error),
 }
 
 impl std::error::Error for Error {}
@@ -108,7 +101,7 @@ impl fmt::Display for Error {
         match self {
             Self::Lexer(e) => e.fmt(f),
             Self::Parser(e) => e.fmt(f),
-            Self::Interp(e) => e.fmt(f),
+            Self::Evaluator(e) => e.fmt(f),
         }
     }
 }

@@ -11,14 +11,14 @@ mod tokens;
 pub use err::Error;
 
 use crate::{
-    diet::{self, Token},
+    lexer::{self, Token},
     span::Span,
 };
 use rust_decimal::Decimal;
 use std::fmt;
 use tokens::Tokens;
 
-pub fn process(input: diet::Output) -> Result<Output, Span<Error>> {
+pub fn process(input: lexer::Output) -> Result<Output, Span<Error>> {
     let mut tokens = Tokens::new(input.tokens);
     let mut output = Output::default();
 
@@ -53,26 +53,55 @@ impl fmt::Display for Expr {
 
 impl Expr {
     fn parse(tokens: &mut Tokens) -> Result<Span<Self>, Span<Error>> {
-        let l_paren = tokens.expect(err::Subject::Expr, |token| token.inner == Token::LParen)?;
+        // S-expressions begin with a left parenthesis: '('.
+        let l_paren = tokens.expect(err::Subject::Token(Some(Token::LParen)), |token| token.inner == Token::LParen)?;
 
         let operation = Operation::parse(tokens)?;
-
         let mut operands = Vec::new();
+
         while let Some(operand) = Operand::parse(tokens)? {
             operands.push(operand);
         }
 
+        // S-expressions end with a right parenthesis: ')'.
         let r_paren = tokens.expect(err::Subject::Token(Some(Token::RParen)), |token| {
             token.inner == Token::RParen
         })?;
 
-        Ok(Span::new(
+        let result  = Span::new(
             Self {
                 operation,
                 operands,
             },
             (l_paren.range.start)..(r_paren.range.end),
-        ))
+        );
+
+        if let Some(Token::Caret) = tokens.peek().map(|it| it.inner) {
+            // Skip the caret.
+            tokens.advance();
+
+            let exp = Operand::parse(tokens)?.unwrap();
+            let end = exp.range.end;
+
+            Ok(Span::new(
+                Self {
+                    operation: Span::new(
+                        Operation {
+                            name: "pow".to_string()
+                        },
+                        // TODO
+                        0..end,
+                    ),
+                    operands: vec![
+                        exp,
+                        Span::new(Operand::Expr(result.inner), result.range),
+                    ],
+                },
+                (l_paren.range.start)..end,
+            ))
+        } else {
+            Ok(result)
+        }
     }
 }
 
