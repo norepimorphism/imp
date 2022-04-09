@@ -4,8 +4,8 @@
 
 macro_rules! def_operation {
     ($name:ident, [ $($in_ty:tt),* ], [ $($in_id:tt),* ], $out_op_ty:tt, $out:expr $(,)?) => {
-        pub const $name: $crate::d::operation::Operation = $crate::d::operation::Operation {
-            sig: &[ $($crate::d::operand::Kind::$in_ty),* ],
+        pub const $name: $crate::interp::operation::Operation = $crate::interp::operation::Operation {
+            sig: &[ $($crate::interp::operand::Kind::$in_ty),* ],
             exe: |ops| {
                 $(
                     // HACK: LOL.
@@ -13,7 +13,7 @@ macro_rules! def_operation {
                     let ops = &ops[1..];
                 )*
 
-                Ok($crate::d::operation::Operand::$out_op_ty($out))
+                Ok($crate::interp::operation::Operand::$out_op_ty($out))
             },
         };
     };
@@ -27,7 +27,7 @@ macro_rules! nullary_r {
             [],
             [],
             Rational,
-            $crate::c::Rational { val: $op },
+            $crate::parser::Rational { val: $op },
         );
     };
 }
@@ -40,7 +40,7 @@ macro_rules! unary_r_r {
             [Rational],
             [a],
             Rational,
-            $crate::c::Rational { val: a.val.$op() },
+            $crate::parser::Rational { val: a.val.$op() },
         );
     };
 }
@@ -53,7 +53,7 @@ macro_rules! binary_rr_r {
             [Rational, Rational],
             [a, b],
             Rational,
-            $crate::c::Rational { val: a.val $op b.val },
+            $crate::parser::Rational { val: a.val $op b.val },
         );
     };
 }

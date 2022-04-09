@@ -4,20 +4,21 @@
 
 //! The IMPL parser.
 
-mod err;
+pub mod err;
+
 mod tokens;
 
 pub use err::Error;
 
 use crate::{
-    b::{self, Token},
+    diet::{self, Token},
     span::Span,
 };
 use rust_decimal::Decimal;
 use std::fmt;
 use tokens::Tokens;
 
-pub fn process(input: b::Output) -> Result<Output, Span<Error>> {
+pub fn process(input: diet::Output) -> Result<Output, Span<Error>> {
     let mut tokens = Tokens::new(input.tokens);
     let mut output = Output::default();
 

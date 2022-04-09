@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::err::{self, Error};
-use crate::{b::Token, span::Span};
+use crate::{diet::Token, span::Span};
 use std::ops::Range;
 
 pub struct Tokens {

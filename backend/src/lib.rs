@@ -41,8 +41,7 @@
 //!
 //! # Project Layout
 //!
-//! Each stage is implemented in a module identified by the stage's letter (refer to section
-//! [Pipeline](#pipeline)). Each module contains some or all of:
+//! Each stage is implemented in a module, each of which contains some or all of:
 //!
 //! * a public function named `process`;
 //! * a public type named `Output`; and
@@ -50,10 +49,10 @@
 
 #![feature(let_else)]
 
-pub mod a;
-pub mod b;
-pub mod c;
-pub mod d;
+pub mod lexer;
+pub mod diet;
+pub mod parser;
+pub mod interp;
 pub mod span;
 
 use rayon::prelude::*;
@@ -62,44 +61,44 @@ use std::fmt;
 
 /// Callbacks for [`process`].
 pub struct Callbacks {
-    pub a: Option<fn(&a::Output)>,
-    pub b: Option<fn(&b::Output)>,
-    pub c: Option<fn(&c::Output)>,
+    pub lexer: Option<fn(&lexer::Output)>,
+    pub diet: Option<fn(&diet::Output)>,
+    pub parser: Option<fn(&parser::Output)>,
 }
 
-pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<d::Output>, Span<Error>> {
-    let output = a::process(impl_code).map_err(|e| e.map(Error::A))?;
-    if let Some(a) = cb.a {
-        a(&output);
+pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<interp::Output>, Span<Error>> {
+    let output = lexer::process(impl_code).map_err(|e| e.map(Error::Lexer))?;
+    if let Some(cb) = cb.lexer {
+        cb(&output);
     }
 
     if output.tokens.is_empty() {
         return Ok(Vec::new());
     }
 
-    let output = b::process(output);
-    if let Some(b) = cb.b {
-        b(&output);
+    let output = diet::process(output);
+    if let Some(cb) = cb.diet {
+        cb(&output);
     }
 
-    let output = c::process(output).map_err(|e| e.map(Error::C))?;
-    if let Some(c) = cb.c {
-        c(&output);
+    let output = parser::process(output).map_err(|e| e.map(Error::Parser))?;
+    if let Some(cb) = cb.parser {
+        cb(&output);
     }
 
     output
         .ast
         .into_par_iter()
-        .map(|expr| d::process(expr.inner).unwrap())
+        .map(|expr| interp::process(expr.inner).unwrap())
         .map(Ok)
         .collect()
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
-    A(a::Error),
-    C(c::Error),
-    D(d::Error),
+    Lexer(lexer::Error),
+    Parser(parser::Error),
+    Interp(interp::Error),
 }
 
 impl std::error::Error for Error {}
@@ -107,9 +106,9 @@ impl std::error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::A(e) => e.fmt(f),
-            Self::C(e) => e.fmt(f),
-            Self::D(e) => e.fmt(f),
+            Self::Lexer(e) => e.fmt(f),
+            Self::Parser(e) => e.fmt(f),
+            Self::Interp(e) => e.fmt(f),
         }
     }
 }

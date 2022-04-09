@@ -2,10 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::{a, span::Span};
+use crate::{lexer, span::Span};
 use std::fmt;
 
-pub fn process(mut input: a::Output) -> Output {
+pub fn process(mut input: lexer::Output) -> Output {
     enclose_in_parens(&mut input.tokens);
 
     Output {
@@ -18,11 +18,11 @@ pub fn process(mut input: a::Output) -> Output {
 /// Although the IMPL grammar permits omitting outer parentheses, the parser is designed to only
 /// recognize expressions which are enclosed in parentheses. Here, we add these parentheses if they
 /// were omitted.
-fn enclose_in_parens(tokens: &mut Vec<Span<a::Token>>) {
+fn enclose_in_parens(tokens: &mut Vec<Span<lexer::Token>>) {
     if !matches!(
         tokens.first(),
         Some(Span {
-            inner: a::Token::LParen,
+            inner: lexer::Token::LParen,
             range: _
         })
     ) {
@@ -31,7 +31,7 @@ fn enclose_in_parens(tokens: &mut Vec<Span<a::Token>>) {
         // The length of this span is 0 so that it will never be shown in an error; this is
         // important because the user never actually typed this parenthesis, so such a span would
         // highlight the wrong character.
-        tokens.insert(0, Span::new(a::Token::LParen, 0..0));
+        tokens.insert(0, Span::new(lexer::Token::LParen, 0..0));
 
         let end = tokens
             .last()
@@ -40,29 +40,29 @@ fn enclose_in_parens(tokens: &mut Vec<Span<a::Token>>) {
             .expect("`tokens` should not be empty")
             .range
             .end;
-        tokens.push(Span::new(a::Token::RParen, end..end));
+        tokens.push(Span::new(lexer::Token::RParen, end..end));
     }
 }
 
 /// Desugars operators into operations.
-fn resolve_operators(tokens: Vec<Span<a::Token>>) -> Vec<Span<Token>> {
+fn resolve_operators(tokens: Vec<Span<lexer::Token>>) -> Vec<Span<Token>> {
     tokens
         .into_iter()
         .map(|token| {
             token.map(|token| match token {
-                a::Token::LParen => Token::LParen,
-                a::Token::RParen => Token::RParen,
-                a::Token::LBrace => Token::LBrace,
-                a::Token::RBrace => Token::RBrace,
-                a::Token::Plus => Token::Symbol("add".to_string()),
-                a::Token::Minus => Token::Symbol("sub".to_string()),
-                a::Token::Star => Token::Symbol("mul".to_string()),
-                a::Token::Slash => Token::Symbol("div".to_string()),
-                a::Token::Dollar => Token::Dollar,
-                a::Token::Hash => Token::Hash,
-                a::Token::Rational(it) => Token::Rational(it),
-                a::Token::StrLit(it) => Token::StrLit(it),
-                a::Token::Symbol(it) => Token::Symbol(it),
+                lexer::Token::LParen => Token::LParen,
+                lexer::Token::RParen => Token::RParen,
+                lexer::Token::LBrace => Token::LBrace,
+                lexer::Token::RBrace => Token::RBrace,
+                lexer::Token::Plus => Token::Symbol("add".to_string()),
+                lexer::Token::Minus => Token::Symbol("sub".to_string()),
+                lexer::Token::Star => Token::Symbol("mul".to_string()),
+                lexer::Token::Slash => Token::Symbol("div".to_string()),
+                lexer::Token::Dollar => Token::Dollar,
+                lexer::Token::Hash => Token::Hash,
+                lexer::Token::Rational(it) => Token::Rational(it),
+                lexer::Token::StrLit(it) => Token::StrLit(it),
+                lexer::Token::Symbol(it) => Token::Symbol(it),
             })
         })
         .collect()

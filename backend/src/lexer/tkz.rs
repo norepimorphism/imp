@@ -60,19 +60,10 @@ pub const STR_LIT: Tokenizer = Tokenizer {
 
 /// A tokenizer that accepts symbols.
 pub const SYMBOL: Tokenizer = Tokenizer {
-    accepts: |current, next| {
-        if current.is_empty() {
-            // Symbols are prefixed with a backslash.
-            next == '\\'
-        } else {
-            // Following the backslash is an alphabetic sequence.
-            next.is_ascii_alphabetic()
-        }
+    accepts: |_, next| {
+        next.is_ascii_alphabetic()
     },
-    tokenize: |mut raw| {
-        // Remove the backslash.
-        raw.remove(0);
-
+    tokenize: |raw| {
         Some(Token::Symbol(raw))
     },
 };

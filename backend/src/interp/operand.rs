@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::c::{self, Rational, StrLit, Symbol};
+use crate::parser::{self, Rational, StrLit, Symbol};
 use std::{fmt, mem::ManuallyDrop};
 
 pub enum Operand {
@@ -11,13 +11,13 @@ pub enum Operand {
     Symbol(Symbol),
 }
 
-impl From<c::Operand> for Operand {
-    fn from(it: c::Operand) -> Self {
+impl From<parser::Operand> for Operand {
+    fn from(it: parser::Operand) -> Self {
         match it {
-            c::Operand::Expr(it) => super::eval_expr(it).unwrap(),
-            c::Operand::Rational(it) => Self::Rational(it),
-            c::Operand::StrLit(it) => Self::StrLit(it),
-            c::Operand::Symbol(it) => Self::Symbol(it),
+            parser::Operand::Expr(it) => super::eval_expr(it).unwrap(),
+            parser::Operand::Rational(it) => Self::Rational(it),
+            parser::Operand::StrLit(it) => Self::StrLit(it),
+            parser::Operand::Symbol(it) => Self::Symbol(it),
         }
     }
 }
