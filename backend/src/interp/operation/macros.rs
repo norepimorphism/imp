@@ -6,10 +6,16 @@ macro_rules! def_operation {
     ($name:ident, [ $($in_ty:tt),* ], [ $($in_id:tt),* ], $out_op_ty:tt, $out:expr $(,)?) => {
         pub const $name: $crate::interp::operation::Operation = $crate::interp::operation::Operation {
             sig: &[ $($crate::interp::operand::Kind::$in_ty),* ],
-            exe: |ops| {
+
+            exe: |
+                #[allow(unused_variables)]
+                ops
+            | {
                 $(
-                    // HACK: LOL.
+                    // TODO: Don't hardcode `.rational`.
                     let $in_id = unsafe { &ops[0].rational };
+                    // HACK: LOL.
+                    #[allow(unused_variables)]
                     let ops = &ops[1..];
                 )*
 
