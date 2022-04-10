@@ -4,7 +4,7 @@
 
 use super::operand::{self, Operand};
 use ahash::RandomState;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 pub struct Operation {
     pub sig: &'static [operand::Kind],
@@ -13,6 +13,14 @@ pub struct Operation {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {}
+
+impl std::error::Error for Error {}
+
+impl fmt::Display for Error {
+    fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Ok(())
+    }
+}
 
 #[static_init::dynamic]
 pub static OPERATIONS: HashMap<&'static str, Operation, RandomState> = HashMap::from_iter([

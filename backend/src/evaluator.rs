@@ -12,49 +12,53 @@ use operand::{Operand, RawOperand};
 use operation::{OPERATIONS, Operation};
 use std::fmt;
 
-pub fn eval_ast(ast: Expr) -> Result<Output, Error> {
-    Ok(Output::Text(eval_expr(ast).unwrap().to_string()))
+pub fn eval_ast(ast: Expr) -> Result<Output, Span<Error>> {
+    eval_expr(ast).map(|it| Output::Text(it.to_string()))
 }
 
-fn eval_expr(expr: Expr) -> Result<Operand, Error> {
-    let operation = get_operation_with_name(expr.operation.inner.name.as_str())?;
-    let operands = construct_raw_operands(operation, expr.operands)?;
-    let _ = check_operand_count(operation, operands.as_slice())?;
+fn eval_expr(expr: Expr) -> Result<Operand, Span<Error>> {
+    let operation = get_operation(expr.operation)?;
+    let operands = construct_raw_operands(&operation.inner, expr.operands)?;
+    let _ = check_operand_count(&operation, operands.as_slice())?;
 
-    execute_operation(operation, operands.as_slice())
+    execute_operation(&operation, operands.as_slice())
 }
 
-fn get_operation_with_name(name: &str) -> Result<&Operation, Error> {
+fn get_operation(operation: Span<parser::Operation>) -> Result<Span<&'static Operation>, Span<Error>> {
     OPERATIONS
-        .get(name)
-        .ok_or_else(|| Error::UnknownOperation {
-            name: name.to_string(),
-        })
+        .get(operation.inner.name.as_str())
+        .map(|it| operation.clone().map(|_| it))
+        .ok_or_else(|| operation.map(|operation| Error::UnknownOperation {
+            name: operation.name.to_string(),
+        }))
 }
 
-fn construct_raw_operands(operation: &Operation, operands: Vec<Span<parser::Operand>>) -> Result<Vec<RawOperand>, Error> {
+fn construct_raw_operands(
+    operation: &Operation,
+    operands: Vec<Span<parser::Operand>>,
+) -> Result<Vec<RawOperand>, Span<Error>> {
     operands
         .into_iter()
         // Recursively evaluate subexpressions (see [`Operand::from`]).
-        .map(|operand| Operand::from(operand.inner))
+        .map(|operand| operand.map(|inner| Operand::from(inner)))
         .enumerate()
         .map(|(idx, operand)| {
             if idx >= operation.sig.len() {
-                return Err(Error::ExtraOperand);
+                return Err(operand.map(|_| Error::ExtraOperand));
             }
 
             let _ = type_check_operand(&operand, operation.sig[idx])?;
 
-            Ok(operand.raw())
+            Ok(operand.inner.raw())
         })
         .collect()
 }
 
-fn type_check_operand(operand: &Operand, operand_kind: operand::Kind) -> Result<(), Error> {
-    if kind_is_valid(operand, operand_kind) {
+fn type_check_operand(operand: &Span<Operand>, operand_kind: operand::Kind) -> Result<(), Span<Error>> {
+    if kind_is_valid(&operand.inner, operand_kind) {
         Ok(())
     } else {
-        return Err(Error::UnexpectedOperandKind);
+        Err(Span::new(Error::UnexpectedOperandKind, operand.range.clone()))
     }
 }
 
@@ -62,17 +66,18 @@ fn kind_is_valid(actual_operand: &Operand, expected_kind: operand::Kind) -> bool
     actual_operand.kind() == expected_kind
 }
 
-fn check_operand_count(operation: &Operation, operands: &[RawOperand]) -> Result<(), Error> {
-    if operands.len() < operation.sig.len() {
-        Err(Error::MissingOperand)
+fn check_operand_count(operation: &Span<&Operation>, operands: &[RawOperand]) -> Result<(), Span<Error>> {
+    if operands.len() < operation.inner.sig.len() {
+        Err(Span::new(Error::MissingOperand, operation.range.clone()))
     } else {
         Ok(())
     }
 }
 
 /// Execute the operation with its operands.
-fn execute_operation(operation: &Operation, operands: &[RawOperand]) -> Result<Operand, Error> {
-    (operation.exe)(operands).map_err(Error::Operation)
+fn execute_operation(operation: &Span<&Operation>, operands: &[RawOperand]) -> Result<Operand, Span<Error>> {
+    (operation.inner.exe)(operands)
+        .map_err(|e| Span::new(Error::Operation(e), operation.range.clone()))
 }
 
 pub enum Output {
@@ -92,7 +97,23 @@ pub enum Error {
 impl std::error::Error for Error {}
 
 impl fmt::Display for Error {
-    fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ExtraOperand => {
+                write!(f, "extra operand")
+            }
+            Self::MissingOperand => {
+                write!(f, "missing operand")
+            }
+            Self::Operation(e) => {
+                e.fmt(f)
+            }
+            Self::UnexpectedOperandKind => {
+                write!(f, "unexpected operand kind")
+            }
+            Self::UnknownOperation { name } => {
+                write!(f, "unknown operation \"{}\"", name)
+            }
+        }
     }
 }

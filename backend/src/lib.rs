@@ -70,8 +70,7 @@ pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<evaluator::Output>,
     output
         .ast
         .into_par_iter()
-        .map(|expr| evaluator::eval_ast(expr.inner).unwrap())
-        .map(Ok)
+        .map(|expr| evaluator::eval_ast(expr.inner).map_err(|e| e.map(Error::Evaluator)))
         .collect()
 }
 
