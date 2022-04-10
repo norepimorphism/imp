@@ -7,49 +7,72 @@
 mod operand;
 mod operation;
 
-use crate::parser::Expr;
-use operand::Operand;
-use operation::OPERATIONS;
+use crate::{parser::{self, Expr}, span::Span};
+use operand::{Operand, RawOperand};
+use operation::{OPERATIONS, Operation};
 use std::fmt;
 
-pub fn process(expr: Expr) -> Result<Output, Error> {
-    Ok(Output::Text(eval_expr(expr).unwrap().to_string()))
+pub fn eval_ast(ast: Expr) -> Result<Output, Error> {
+    Ok(Output::Text(eval_expr(ast).unwrap().to_string()))
 }
 
 fn eval_expr(expr: Expr) -> Result<Operand, Error> {
-    let operation = OPERATIONS
-        .get(&expr.operation.inner.name.as_str())
-        .ok_or_else(|| Error::UnknownOperation {
-            name: expr.operation.inner.name.clone(),
-        })?;
+    let operation = get_operation_with_name(expr.operation.inner.name.as_str())?;
+    let operands = construct_raw_operands(operation, expr.operands)?;
+    let _ = check_operand_count(operation, operands.as_slice())?;
 
-    let operands = expr
-        .operands
+    execute_operation(operation, operands.as_slice())
+}
+
+fn get_operation_with_name(name: &str) -> Result<&Operation, Error> {
+    OPERATIONS
+        .get(name)
+        .ok_or_else(|| Error::UnknownOperation {
+            name: name.to_string(),
+        })
+}
+
+fn construct_raw_operands(operation: &Operation, operands: Vec<Span<parser::Operand>>) -> Result<Vec<RawOperand>, Error> {
+    operands
         .into_iter()
         // Recursively evaluate subexpressions (see [`Operand::from`]).
-        .map(|operand| operand.map(Operand::from))
+        .map(|operand| Operand::from(operand.inner))
         .enumerate()
         .map(|(idx, operand)| {
             if idx >= operation.sig.len() {
                 return Err(Error::ExtraOperand);
             }
 
-            let expected_type = operation.sig[idx];
+            let _ = type_check_operand(&operand, operation.sig[idx])?;
 
-            if !operand.inner.is_type_valid(expected_type) {
-                return Err(Error::UnexpectedOperandType);
-            }
-
-            Ok(operand::Raw::new(operand.inner))
+            Ok(operand.raw())
         })
-        .collect::<Result<Vec<operand::Raw>, Error>>()?;
+        .collect()
+}
 
-    if operands.len() < operation.sig.len() {
-        return Err(Error::MissingOperand);
+fn type_check_operand(operand: &Operand, operand_kind: operand::Kind) -> Result<(), Error> {
+    if kind_is_valid(operand, operand_kind) {
+        Ok(())
+    } else {
+        return Err(Error::UnexpectedOperandKind);
     }
+}
 
-    // Execute the operation with its operands.
-    (operation.exe)(operands.as_slice()).map_err(Error::Operation)
+fn kind_is_valid(actual_operand: &Operand, expected_kind: operand::Kind) -> bool {
+    actual_operand.kind() == expected_kind
+}
+
+fn check_operand_count(operation: &Operation, operands: &[RawOperand]) -> Result<(), Error> {
+    if operands.len() < operation.sig.len() {
+        Err(Error::MissingOperand)
+    } else {
+        Ok(())
+    }
+}
+
+/// Execute the operation with its operands.
+fn execute_operation(operation: &Operation, operands: &[RawOperand]) -> Result<Operand, Error> {
+    (operation.exe)(operands).map_err(Error::Operation)
 }
 
 pub enum Output {
@@ -62,7 +85,7 @@ pub enum Error {
     ExtraOperand,
     MissingOperand,
     Operation(operation::Error),
-    UnexpectedOperandType,
+    UnexpectedOperandKind,
     UnknownOperation { name: String },
 }
 
