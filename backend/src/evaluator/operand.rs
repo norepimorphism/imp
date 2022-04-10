@@ -33,8 +33,12 @@ impl fmt::Display for Operand {
 }
 
 impl Operand {
-    pub fn is_type_valid(&self, expected: Kind) -> bool {
-        expected == Kind::new(self)
+    pub fn kind(&self) -> Kind {
+        match self {
+            Self::Rational(_) => Kind::Rational,
+            Self::StrLit(_) => Kind::StrLit,
+            Self::Symbol(_) => Kind::Symbol,
+        }
     }
 }
 
@@ -45,34 +49,24 @@ pub enum Kind {
     Symbol,
 }
 
-impl Kind {
-    fn new(operand: &Operand) -> Self {
-        match operand {
-            Operand::Rational(_) => Self::Rational,
-            Operand::StrLit(_) => Self::StrLit,
-            Operand::Symbol(_) => Self::Symbol,
-        }
-    }
-}
-
-pub union Raw {
-    pub rational: ManuallyDrop<Rational>,
-    pub str_lit: ManuallyDrop<StrLit>,
-    pub symbol: ManuallyDrop<Symbol>,
-}
-
-impl Raw {
-    pub fn new(operand: Operand) -> Self {
-        match operand {
-            Operand::Rational(it) => Self {
+impl Operand {
+    pub fn raw(self) -> RawOperand {
+        match self {
+            Self::Rational(it) => RawOperand {
                 rational: ManuallyDrop::new(it),
             },
-            Operand::StrLit(it) => Self {
+            Self::StrLit(it) => RawOperand {
                 str_lit: ManuallyDrop::new(it),
             },
-            Operand::Symbol(it) => Self {
+            Self::Symbol(it) => RawOperand {
                 symbol: ManuallyDrop::new(it),
             },
         }
     }
+}
+
+pub union RawOperand {
+    pub rational: ManuallyDrop<Rational>,
+    pub str_lit: ManuallyDrop<StrLit>,
+    pub symbol: ManuallyDrop<Symbol>,
 }
