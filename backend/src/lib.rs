@@ -38,14 +38,6 @@
 //! c. The parser assigns meaning to each token by grouping them into expressions and, ultimately,
 //!    an Abstract Syntax Tree (AST).
 //! d. The interpreter evaluates the AST and produces either a textual or graphical result.
-//!
-//! # Project Layout
-//!
-//! Each stage is implemented in a module, each of which contains some or all of:
-//!
-//! * a public function named `process`;
-//! * a public type named `Output`; and
-//! * a public type named `Error`.
 
 #![feature(let_else)]
 
@@ -60,29 +52,25 @@ use std::fmt;
 
 /// Callbacks for [`process`].
 pub struct Callbacks {
-    pub lexer: Option<fn(&lexer::Output)>,
-    pub parser: Option<fn(&parser::Output)>,
+    pub inspect_lexer_output: Option<fn(&lexer::Output)>,
+    pub inspect_parser_output: Option<fn(&parser::Output)>,
 }
 
 pub fn process(impl_code: &str, cb: Callbacks) -> Result<Vec<evaluator::Output>, Span<Error>> {
-    let output = lexer::process(impl_code).map_err(|e| e.map(Error::Lexer))?;
-    if let Some(cb) = cb.lexer {
+    let output = lexer::lex(impl_code).map_err(|e| e.map(Error::Lexer))?;
+    if let Some(cb) = cb.inspect_lexer_output {
         cb(&output);
     }
 
-    if output.tokens.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let output = parser::process(output).map_err(|e| e.map(Error::Parser))?;
-    if let Some(cb) = cb.parser {
+    let output = parser::parse(output).map_err(|e| e.map(Error::Parser))?;
+    if let Some(cb) = cb.inspect_parser_output {
         cb(&output);
     }
 
     output
         .ast
         .into_par_iter()
-        .map(|expr| evaluator::process(expr.inner).unwrap())
+        .map(|expr| evaluator::eval_ast(expr.inner).unwrap())
         .map(Ok)
         .collect()
 }

@@ -18,7 +18,7 @@ use rust_decimal::Decimal;
 use std::fmt;
 use tokens::Tokens;
 
-pub fn process(input: lexer::Output) -> Result<Output, Span<Error>> {
+pub fn parse(input: lexer::Output) -> Result<Output, Span<Error>> {
     let mut tokens = Tokens::new(input.tokens);
     let mut output = Output::default();
 

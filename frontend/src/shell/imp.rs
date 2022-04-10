@@ -8,14 +8,11 @@ pub fn process(this: &Shell, input: &str) {
     let result = imp_backend::process(
         input,
         imp_backend::Callbacks {
-            lexer: Some(|out| {
-                // println!("A: {}", out);
+            inspect_lexer_output: Some(|out| {
+                println!("A: {}", out);
             }),
-            diet: Some(|out| {
-                // println!("B: {}", out);
-            }),
-            parser: Some(|out| {
-                // println!("C: {}", out);
+            inspect_parser_output: Some(|out| {
+                println!("C: {}", out);
             }),
         },
     );
@@ -36,9 +33,9 @@ pub fn process(this: &Shell, input: &str) {
                 "{}",
                 err::BackendError {
                     stage: match e.inner {
-                        Error::Lexer(_) => Stage::A,
-                        Error::Parser(_) => Stage::C,
-                        Error::Interp(_) => Stage::D,
+                        Error::Lexer(_) => Stage::Lexer,
+                        Error::Parser(_) => Stage::Parser,
+                        Error::Evaluator(_) => Stage::Evaluator,
                     },
                     inner: e.inner,
                 },
@@ -47,7 +44,7 @@ pub fn process(this: &Shell, input: &str) {
     }
 }
 
-fn print_output(this: &Shell, output: imp_backend::interp::Output) {
+fn print_output(this: &Shell, output: imp_backend::evaluator::Output) {
     print!(
         "  {} ",
         crate::color(
@@ -58,10 +55,10 @@ fn print_output(this: &Shell, output: imp_backend::interp::Output) {
     );
 
     match output {
-        imp_backend::interp::Output::Text(text) => {
+        imp_backend::evaluator::Output::Text(text) => {
             print!("{}", text);
         }
-        imp_backend::interp::Output::Graphic => {
+        imp_backend::evaluator::Output::Graphic => {
             todo!()
         }
     }

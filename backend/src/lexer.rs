@@ -16,9 +16,8 @@ use std::{fmt, iter::Peekable};
 use tokenizer::Tokenizer;
 
 /// Translates one or more lines of IMPL code into [a sequence of lexical tokens](Output).
-pub fn process(impl_code: &str) -> Result<Output, Span<Error>> {
-    // A peekable iterator of character and index pairs.
-    let mut idxed_chars = break_into_chars(impl_code);
+pub fn lex(impl_code: &str) -> Result<Output, Span<Error>> {
+    let mut idxed_chars = make_peekable_idxed_chars(impl_code);
     let mut output = Output::default();
 
     // Iterate over each character/index pair.
@@ -45,12 +44,14 @@ pub fn process(impl_code: &str) -> Result<Output, Span<Error>> {
         }
     }
 
-    enclose_in_parens(&mut output.tokens);
+    if !output.tokens.is_empty() {
+        enclose_tokens_in_parens(&mut output.tokens);
+    }
 
     Ok(output)
 }
 
-fn break_into_chars(it: &str) -> Peekable<impl Iterator<Item = IndexedChar> + '_> {
+fn make_peekable_idxed_chars(it: &str) -> Peekable<impl Iterator<Item = IndexedChar> + '_> {
     it.chars()
         .enumerate()
         .map(|(idx, val)| IndexedChar { idx, val })
@@ -150,38 +151,6 @@ fn tokenize_single(ch: char) -> Option<Token> {
     }
 }
 
-/// Encloses a token sequence in [`Token::LParen`] and [`Token::RParen`].
-///
-/// Although the IMPL grammar permits omitting outer parentheses, the parser is designed to only
-/// recognize expressions which are enclosed in parentheses. Here, we add these parentheses if they
-/// were omitted.
-fn enclose_in_parens(tokens: &mut Vec<Span<Token>>) {
-    if !matches!(
-        tokens.first(),
-        Some(Span {
-            inner: Token::LParen,
-            range: _
-        })
-    ) {
-        // An outer left parenthesis wasn't found.
-
-        // The length of this span is 0 so that it will never be shown in an error; this is
-        // important because the user never actually typed this parenthesis, so such a span would
-        // highlight the wrong character.
-        tokens.insert(0, Span::new(Token::LParen, 0..0));
-
-        let end = tokens
-            .last()
-            // This `expect` is OK because we know that `tokens` isn't empty; `tokens.first()`
-            // matched with a `Some(_)` pattern, after all.
-            .expect("`tokens` should not be empty")
-            .range
-            .end;
-        tokens.push(Span::new(Token::RParen, end..end));
-    }
-}
-
-
 /// The output of [`tokenize`].
 struct Tokenized {
     /// The length, in characters, of the original IMPL code.
@@ -240,6 +209,42 @@ impl fmt::Display for Token {
             it
         )
     }
+}
+
+/// Encloses a token sequence in [`Token::LParen`] and [`Token::RParen`].
+///
+/// Although the IMPL grammar permits omitting outer parentheses, the parser is designed to only
+/// recognize expressions which are enclosed in parentheses. Here, we add these parentheses if they
+/// were omitted.
+fn enclose_tokens_in_parens(tokens: &mut Vec<Span<Token>>) {
+    if !tokens_are_enclosed_in_parens(tokens) {
+        // An outer left parenthesis wasn't found.
+
+        // The length of this span is 0 so that it will never be shown in an error; this is
+        // important because the user never actually typed this parenthesis, so such a span would
+        // highlight the wrong character.
+        tokens.insert(0, Span::new(Token::LParen, 0..0));
+
+        let end = tokens
+            .last()
+            // This `expect` is OK because we know that `tokens` isn't empty; `tokens.first()`
+            // matched with a `Some(_)` pattern, after all.
+            .expect("`tokens` should not be empty")
+            .range
+            .end;
+        tokens.push(Span::new(Token::RParen, end..end));
+    }
+}
+
+fn tokens_are_enclosed_in_parens(tokens: &Vec<Span<Token>>) -> bool {
+    // We assume that if the left parenthesis is present, the right is also.
+    matches!(
+        tokens.first(),
+        Some(Span {
+            inner: Token::LParen,
+            range: _
+        })
+    )
 }
 
 #[derive(Debug, Default)]
