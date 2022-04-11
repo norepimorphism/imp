@@ -189,7 +189,7 @@ impl fmt::Display for Token {
         let it = match self {
             Self::Rational(it) => it.to_string(),
             Self::StrLit(it) => it.to_string(),
-            Self::Symbol(it) => format!("\\{}", it),
+            Self::Symbol(it) => format!("{}", it),
             Self::LParen => '('.to_string(),
             Self::RParen => ')'.to_string(),
             Self::LBrace => '{'.to_string(),
